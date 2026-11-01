@@ -127,26 +127,55 @@ var DEVICE_SPECS = {
 
 var SHARED_PARTS = [
   // --- confirmed: iPhone 12 / 12 Pro ---
-  { part: 'screen', status: 'confirmed', models: ['Apple iPhone 12', 'Apple iPhone 12 Pro'], note: 'Same 6.1" OLED assembly and connectors — the standard interchangeable pair in the trade.' },
+  { part: 'screen', status: 'confirmed', models: ['Apple iPhone 12', 'Apple iPhone 12 Pro'], note: 'REWA swap test and iFixit teardown: same display, interchangeable (True Tone lost unless programmed).' },
   { part: 'battery', status: 'confirmed', models: ['Apple iPhone 12', 'Apple iPhone 12 Pro'], note: 'Same battery, 2815 mAh (Apple part A2479).' },
-  { part: 'chargeport', status: 'confirmed', models: ['Apple iPhone 12', 'Apple iPhone 12 Pro'], note: 'Same Lightning connector flex.' },
-  // --- confirmed: iPhone 13 / 13 Pro ---
-  { part: 'screen', status: 'confirmed', models: ['Apple iPhone 13', 'Apple iPhone 13 Pro'], note: 'Same 6.1" OLED assembly — interchangeable in the trade (Pro adds 120Hz ProMotion, same fit).' },
-  { part: 'chargeport', status: 'confirmed', models: ['Apple iPhone 13', 'Apple iPhone 13 Pro'], note: 'Same Lightning connector flex.' },
-  // --- confirmed: iPhone 8 / SE (2020) ---
-  { part: 'screen', status: 'confirmed', models: ['Apple iPhone 8', 'Apple iPhone SE (2020)'], note: 'SE (2020) reuses the iPhone 8 4.7" LCD assembly — a standard interchangeable pair.' },
-  { part: 'battery', status: 'confirmed', models: ['Apple iPhone 8', 'Apple iPhone SE (2020)'], note: 'Same battery, 1821 mAh.' },
-  { part: 'chargeport', status: 'confirmed', models: ['Apple iPhone 8', 'Apple iPhone SE (2020)'], note: 'Same Lightning connector flex.' },
-  // --- confirmed: iPhone XR / 11 screen ---
-  { part: 'screen', status: 'confirmed', models: ['Apple iPhone XR', 'Apple iPhone 11'], note: 'Same 6.1" LCD panel — interchangeable in the trade; transfer the earpiece flex and brackets.' },
-  // --- confirmed: earpiece / loudspeaker / flex shared across the 12 & 13 generations ---
-  { part: 'earpiece', status: 'confirmed', models: ['Apple iPhone 12', 'Apple iPhone 12 Pro', 'Apple iPhone 12 Pro Max', 'Apple iPhone 13', 'Apple iPhone 13 Pro', 'Apple iPhone 13 Pro Max'], note: 'Suppliers list a single earpiece-speaker SKU fitting the 12 and 13 generations (base, Pro and Pro Max).' },
-  { part: 'loudspeaker', status: 'confirmed', models: ['Apple iPhone 12', 'Apple iPhone 12 Pro', 'Apple iPhone 13', 'Apple iPhone 13 Pro'], note: 'Same lower loudspeaker module listed for these four models by aftermarket suppliers.' },
+  { part: 'chargeport', status: 'confirmed', models: ['Apple iPhone 12', 'Apple iPhone 12 Pro'], note: 'REWA: Lightning connector flex same appearance, charging works after swap.' },
+  { part: 'earpiece', status: 'confirmed', models: ['Apple iPhone 12', 'Apple iPhone 12 Pro'], note: 'iFixit lists one iPhone 12/12 Pro earpiece speaker; REWA: interchangeable except the Face ID flood illuminator.' },
+  { part: 'loudspeaker', status: 'confirmed', models: ['Apple iPhone 12', 'Apple iPhone 12 Pro'], note: 'iFixit lists one iPhone 12/12 Pro loudspeaker; REWA: same look/size, swap works.' },
   { part: 'flex', status: 'confirmed', models: ['Apple iPhone 12', 'Apple iPhone 12 Pro'], note: 'Same power/volume flex.' },
+  // --- confirmed: iPhone 13 / 13 Pro (charging port and flex only — screens do NOT swap) ---
+  { part: 'chargeport', status: 'confirmed', models: ['Apple iPhone 13', 'Apple iPhone 13 Pro'], note: 'Same Lightning connector flex.' },
   { part: 'flex', status: 'confirmed', models: ['Apple iPhone 13', 'Apple iPhone 13 Pro'], note: 'Same power/volume flex.' },
+  // --- confirmed: iPhone 8 / SE (2020) ---
+  { part: 'screen', status: 'confirmed', models: ['Apple iPhone 8', 'Apple iPhone SE (2020)'], note: 'iFixit swap test: display assembly swappable (loses 3D Touch on the SE).' },
+  { part: 'chargeport', status: 'confirmed', models: ['Apple iPhone 8', 'Apple iPhone SE (2020)'], note: 'Same Lightning connector flex.' },
+  { part: 'frontcam', status: 'confirmed', models: ['Apple iPhone 8', 'Apple iPhone SE (2020)'], note: 'iFixit: front cameras swappable between 8 and SE (2020). Rear camera does NOT swap.' },
+  { part: 'loudspeaker', status: 'confirmed', models: ['Apple iPhone 8', 'Apple iPhone SE (2020)'], note: 'iFixit lists one iPhone 8/SE (2020) loudspeaker part.' },
+  // --- confirmed: iPhone SE (2020) / SE (2022) screen ---
+  { part: 'screen', status: 'confirmed', models: ['Apple iPhone SE (2020)', 'Apple iPhone SE (2022)'], note: 'iFixit sells one SE (2020)/SE (2022) screen; swap possible, move the Touch ID button over.' },
+  // --- confirmed: iPhone 13 Pro / 14 Pro battery ---
+  { part: 'battery', status: 'confirmed', models: ['Apple iPhone 13 Pro', 'Apple iPhone 14 Pro'], note: 'REWA teardown: battery appearance and flex identical, interchangeable (Unknown Part warning unless the IC is swapped).' },
+  // --- confirmed: Samsung A-series batteries, earpiece, flex (part numbers verified) ---
+  { part: 'battery', status: 'confirmed', models: ['Samsung Galaxy A12', 'Samsung Galaxy A13'], note: 'Same part no. EB-BA217ABY.' },
+  { part: 'battery', status: 'confirmed', models: ['Samsung Galaxy A22', 'Samsung Galaxy A32'], note: 'Same part no. EB-BA315ABY (4G variants).' },
+  { part: 'earpiece', status: 'confirmed', models: ['Samsung Galaxy A22', 'Samsung Galaxy A32'], note: 'MobileSentrix lists the same earpiece speaker for A22 4G / A32 4G.' },
+  { part: 'battery', status: 'confirmed', models: ['Samsung Galaxy A33', 'Samsung Galaxy A53'], note: 'Same battery, 5000 mAh (EB-BA336ABY / EB-BA536ABY cross-reference, 5G models).' },
+  { part: 'battery', status: 'confirmed', models: ['Samsung Galaxy A34', 'Samsung Galaxy A54'], note: 'Same part no. EB-BA546ABY, 5000 mAh.' },
+  { part: 'flex', status: 'confirmed', models: ['Samsung Galaxy A34', 'Samsung Galaxy A54'], note: 'Same power/volume flex and main flex listed for A34 5G / A54 5G.' },
+  { part: 'screen', status: 'confirmed', models: ['Samsung Galaxy A13', 'Samsung Galaxy A23'], note: 'Supplier complete-screen listing for A13 / A23 4G — check the A13 variant before ordering.' },
+  // --- confirmed: Redmi Note / Poco (part numbers verified) ---
+  { part: 'screen', status: 'confirmed', models: ['Xiaomi Redmi Note 10 Pro', 'Xiaomi Redmi Note 11 Pro', 'Xiaomi Redmi Note 12 Pro', 'Poco X4 Pro'], note: 'iFixit / MobileSentrix: one screen for Note 10 Pro / 11 Pro / 12 Pro 4G and Poco X4 Pro 5G.' },
+  { part: 'battery', status: 'confirmed', models: ['Xiaomi Redmi Note 11 Pro', 'Xiaomi Redmi Note 12 Pro', 'Poco X4 Pro'], note: 'Same part no. BN5E, 5000 mAh (Note 12 Pro 4G variant; Poco X4 Pro 5G).' },
+  { part: 'battery', status: 'confirmed', models: ['Xiaomi Redmi Note 12', 'Poco X5'], note: 'Same part no. BN5J, 5000 mAh (Note 12 5G / Poco X5 5G).' },
   // --- spec-matched only: same size/type on paper, fit NOT confirmed ---
-  { part: 'screen', status: 'specMatched', models: ['Apple iPhone X', 'Apple iPhone XS', 'Apple iPhone 11 Pro'], note: 'All 5.8" OLED, 1125x2436. Same panel size on paper — connectors and brackets differ, verify fit.' },
+  // Several of these are pairs iFixit or suppliers explicitly say do NOT swap —
+  // they stay here (never in the confirmed list) so a technician checks before ordering.
+  { part: 'screen', status: 'specMatched', models: ['Apple iPhone 13', 'Apple iPhone 13 Pro'], note: 'Both 6.1" OLED, but iFixit: screen swap No — connectors incompatible.' },
+  { part: 'screen', status: 'specMatched', models: ['Apple iPhone XR', 'Apple iPhone 11'], note: 'Both 6.1" LCD 828x1792, but iFixit: not interchangeable — touch inconsistent / no touch.' },
+  { part: 'screen', status: 'specMatched', models: ['Apple iPhone X', 'Apple iPhone XS', 'Apple iPhone 11 Pro'], note: 'All 5.8" OLED, 1125x2436, but iFixit: assemblies/frames differ, not interchangeable.' },
+  { part: 'screen', status: 'specMatched', models: ['Apple iPhone 13', 'Apple iPhone 14'], note: 'Both 6.1", but different assembly — not interchangeable per GaTech.' },
+  { part: 'screen', status: 'specMatched', models: ['Apple iPhone 15', 'Apple iPhone 15 Pro'], note: 'Both 6.1" OLED, but different assembly / titanium frame / 120Hz Pro — not interchangeable.' },
+  { part: 'screen', status: 'specMatched', models: ['Apple iPhone 15', 'Apple iPhone 16'], note: 'Both 6.1", but different assembly — not interchangeable per GaTech.' },
+  { part: 'battery', status: 'specMatched', models: ['Apple iPhone 8', 'Apple iPhone SE (2020)'], note: 'Both 1821 mAh on paper, but iFixit: connector differs, not interchangeable.' },
+  { part: 'battery', status: 'specMatched', models: ['Apple iPhone SE (2020)', 'Apple iPhone SE (2022)'], note: '1821 vs 2018 mAh, same size, but iFixit: battery swap impossible — connector changed.' },
   { part: 'screen', status: 'specMatched', models: ['Samsung Galaxy A32', 'Samsung Galaxy A33'], note: 'Both 6.4" Super AMOLED, 1080x2400, 90Hz. Same size on paper — verify fit.' },
+  { part: 'screen', status: 'specMatched', models: ['Samsung Galaxy Z Flip 3', 'Samsung Galaxy Z Flip 4'], note: 'Both 6.7" 120Hz foldable AMOLED, but sources: screens not interchangeable; batteries differ too (3300 vs 3700 mAh).' },
+  { part: 'screen', status: 'specMatched', models: ['Samsung Galaxy Z Fold 3', 'Samsung Galaxy Z Fold 4'], note: 'Both 7.6" inner / 6.2" cover, 4400 mAh, but each Fold generation uses its own screens and batteries.' },
+  { part: 'battery', status: 'specMatched', models: ['Samsung Galaxy A14', 'Samsung Galaxy A15'], note: 'Both 5000 mAh, but different part numbers — GaTech says not interchangeable.' },
+  { part: 'battery', status: 'specMatched', models: ['Samsung Galaxy S23', 'Samsung Galaxy S24'], note: 'Both 3900 mAh class, but different part numbers — no swap source found.' },
+  { part: 'screen', status: 'specMatched', models: ['Google Pixel 6a', 'Google Pixel 7a'], note: 'Both 6.1" OLED, 1080x2400, but 60Hz vs 90Hz — parts not compatible per iLevante.' },
+  { part: 'screen', status: 'specMatched', models: ['Google Pixel 8', 'Google Pixel 8a'], note: 'Both 6.1" OLED, but Pixel 8 screen does not fit 8a; batteries differ too.' },
+  { part: 'screen', status: 'specMatched', models: ['Motorola G20', 'Motorola G30', 'Motorola G50', 'Motorola G60'], note: 'Marketplace listings group them under one title, but no swap test or part-number proof; G60 is larger (6.8" vs 6.5").' },
   { part: 'screen', status: 'specMatched', models: ['Xiaomi Redmi Note 12', 'Xiaomi Redmi Note 12 Pro', 'Xiaomi Redmi Note 13'], note: 'All 6.67" AMOLED, 1080x2400, 120Hz. Same size on paper — verify fit.' },
   { part: 'screen', status: 'specMatched', models: ['Poco X4 Pro', 'Poco X5'], note: 'Both 6.67" Super AMOLED, 1080x2400, 120Hz. Same size on paper — verify fit.' },
   { part: 'screen', status: 'specMatched', models: ['Infinix Note 11', 'Infinix Note 12'], note: 'Both 6.7" AMOLED, 1080x2400. Same size on paper — verify fit.' },

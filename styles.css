@@ -285,3 +285,46 @@ textarea.input { resize: vertical; }
   .stat-value { font-size: 26px; }
   .spec-grid { grid-template-columns: 1fr; }
 }
+
+/* Pagination */
+.pager { display: flex; gap: 10px; align-items: center; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
+.pager-label { color: var(--muted); font-size: 13.5px; font-weight: 600; }
+.pager .btn[disabled] { opacity: .4; cursor: default; }
+.pager .btn[disabled]:hover { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.16); }
+
+/* WhatsApp + warranty */
+.wa-btn {
+  background: rgba(37, 211, 102, .16); border-color: rgba(37, 211, 102, .55); color: #8dffb0;
+  text-decoration: none; display: inline-block;
+}
+.wa-btn:hover { background: rgba(37, 211, 102, .28); border-color: rgba(37, 211, 102, .8); }
+.badge.warr { background: rgba(34, 255, 136, .14); color: #7dffa9; border-color: rgba(34,255,136,.4); }
+
+/* Photos */
+.spec-head { display: flex; gap: 16px; align-items: flex-start; }
+.spec-photo {
+  width: 120px; height: auto; max-height: 160px; object-fit: contain; flex: 0 0 120px;
+  background: rgba(255,255,255,.04); border: 1px solid var(--line-soft); border-radius: 12px; padding: 6px;
+}
+.photo-thumb { width: 56px; height: 56px; object-fit: cover; border-radius: 10px; border: 1px solid var(--line-soft); display: block; }
+.photo-thumb-lg { width: 160px; height: auto; max-height: 200px; object-fit: contain; border-radius: 12px; border: 1px solid var(--line-soft); margin-top: 8px; }
+
+/* Services editor (Settings) */
+.svc-row { display: grid; grid-template-columns: 1.4fr .6fr 1fr auto; gap: 8px; align-items: center; margin-bottom: 8px; }
+.svc-row .input { margin-bottom: 0; }
+
+/* Page-level horizontal overflow (dashboard showed a ~13px sideways shift):
+   grid children may not shrink below their content by default, which can
+   push the page wider than the viewport; and clip any stray overflow
+   without breaking the sticky sidebar (clip, unlike hidden, creates no
+   scroll container) or the tables' own sideways scroll. */
+#main, #view, .grid-2, .grid-pos, .grid-2col, .cards { min-width: 0; }
+.grid-2 > *, .grid-pos > *, .grid-2col > *, .cards > * { min-width: 0; }
+html { overflow-x: clip; }
+
+@media (max-width: 860px) {
+  .spec-head { flex-direction: column; }
+  .spec-photo { width: 96px; flex-basis: auto; }
+  .svc-row { grid-template-columns: 1fr 1fr; }
+  .svc-row .btn { grid-column: 1 / -1; justify-self: end; }
+}

@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixtings Ja — Phone Repair &amp; Phones for Sale | Falmouth, Trelawny</title>
+<meta name="description" content="Fixtings Ja — mobile phone repair shop in Falmouth, Trelawny. Screen, battery, charging port and more. Phones for sale. Check your repair status.">
+<style>
+  * { box-sizing: border-box; }
+  :root {
+    --bg: #05070d;
+    --panel: rgba(255, 255, 255, .045);
+    --line: rgba(0, 229, 255, .14);
+    --line-soft: rgba(255, 255, 255, .09);
+    --ink: #eaf2ff;
+    --muted: #a7b8d2;
+    --cyan: #00e5ff;
+    --green: #22ff88;
+    --gold: #ffc531;
+    --radius: 16px;
+    --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-display: "SF Mono", ui-monospace, "Cascadia Code", "Roboto Mono", Menlo, Consolas, monospace;
+  }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--font-body);
+    background:
+      radial-gradient(900px 480px at 85% -10%, rgba(0, 229, 255, .12), transparent 60%),
+      radial-gradient(700px 420px at -10% 110%, rgba(34, 255, 136, .09), transparent 60%),
+      var(--bg);
+    color: var(--ink);
+    font-size: 15px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+  a { color: var(--cyan); }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 20px 16px 40px; }
+
+  /* Header */
+  header { text-align: center; padding: 12px 0 4px; }
+  .logo { width: 96px; height: 96px; object-fit: cover; border-radius: 22px; border: 1px solid rgba(0, 229, 255, .5); box-shadow: 0 0 24px rgba(0, 229, 255, .35); background: #0d1424; }
+  h1 {
+    font-size: 30px; margin: 14px 0 2px; letter-spacing: .01em;
+    font-family: var(--font-display); font-weight: 700;
+    background: linear-gradient(90deg, #fff, var(--cyan));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .tagline { color: var(--muted); margin: 0 0 4px; font-size: 15px; }
+  .updated { color: #7e90ad; font-size: 12.5px; margin: 6px 0 0; }
+  .updated[hidden] { display: none; }
+
+  /* Sections / cards */
+  section { margin-top: 22px; }
+  h2 { font-size: 18px; margin: 0 0 4px; font-family: var(--font-display); }
+  h2::after {
+    content: ""; display: block; height: 3px; width: 48px; margin-top: 8px; border-radius: 3px;
+    background: linear-gradient(90deg, var(--cyan), var(--green));
+    box-shadow: 0 0 12px rgba(0, 229, 255, .6);
+  }
+  .section-sub { color: var(--muted); margin: 0 0 12px; font-size: 14px; }
+  .card {
+    background: linear-gradient(160deg, rgba(255,255,255,.07), rgba(255,255,255,.02));
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius); padding: 18px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, .35);
+  }
+
+  /* Services */
+  .service-list { list-style: none; margin: 0; padding: 0; }
+  .service-list li {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+    padding: 11px 2px; border-bottom: 1px solid var(--line-soft);
+  }
+  .service-list li:last-child { border-bottom: none; }
+  .service-name { font-weight: 600; }
+  .service-note { display: block; color: var(--muted); font-size: 13px; font-weight: 400; margin-top: 2px; }
+  .service-price { color: var(--green); font-weight: 800; font-family: var(--font-display); white-space: nowrap; }
+  .from { color: var(--muted); font-size: 12px; font-weight: 400; }
+
+  /* Phones */
+  .phone-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .phone {
+    background: linear-gradient(160deg, rgba(255,255,255,.07), rgba(255,255,255,.02));
+    border: 1px solid var(--line-soft); border-radius: var(--radius);
+    padding: 14px; box-shadow: 0 8px 28px rgba(0, 0, 0, .35);
+  }
+  .phone img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; border-radius: 10px; display: block; margin-bottom: 10px; background: #0d1424; }
+  .phone-name { font-weight: 800; font-size: 16px; }
+  .phone-detail { color: var(--muted); font-size: 13.5px; margin-top: 2px; }
+  .phone-price { color: var(--green); font-weight: 800; font-family: var(--font-display); font-size: 17px; margin-top: 8px; }
+  .empty-note { color: var(--muted); margin: 0; }
+
+  /* Buttons */
+  .btn {
+    display: block; width: 100%; text-align: center; text-decoration: none;
+    background: linear-gradient(90deg, var(--cyan), var(--green));
+    color: #04121a; font-weight: 800; font-size: 16px;
+    padding: 14px 18px; border-radius: 12px; border: none; cursor: pointer;
+    box-shadow: 0 0 18px rgba(0, 229, 255, .35);
+  }
+  .btn:hover { filter: brightness(1.12); }
+  .btn.secondary {
+    background: rgba(255,255,255,.06); color: var(--ink);
+    border: 1px solid rgba(0, 229, 255, .5); box-shadow: none;
+  }
+  .btn.secondary:hover { background: rgba(0, 229, 255, .12); }
+  .btn-row { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+
+  /* Status lookup */
+  .lookup-form { display: flex; gap: 8px; }
+  .lookup-form input {
+    flex: 1; min-width: 0; padding: 12px 13px; border: 1px solid rgba(255,255,255,.18);
+    border-radius: 10px; font-size: 15px; background: #0c1322; color: var(--ink); min-height: 48px;
+  }
+  .lookup-form input:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(0, 229, 255, .25); }
+  .lookup-form button {
+    flex: 0 0 auto; padding: 12px 18px; border-radius: 10px; border: none; cursor: pointer;
+    background: linear-gradient(90deg, var(--cyan), var(--green));
+    color: #04121a; font-weight: 800; font-size: 15px; min-height: 48px;
+  }
+  .lookup-result { margin: 12px 0 0; padding: 12px 14px; border-radius: 10px; background: rgba(0, 229, 255, .07); border: 1px solid var(--line); }
+  .lookup-result[hidden] { display: none; }
+  .lookup-result.found { background: rgba(34, 255, 136, .08); border-color: rgba(34, 255, 136, .4); }
+  .lookup-result .ticket-no { font-family: var(--font-display); font-weight: 700; }
+  .lookup-result .status { color: var(--green); font-weight: 800; }
+
+  /* Find us on Google */
+  .google-rating { font-size: 17px; margin: 0 0 10px; }
+  .google-rating .stars { color: var(--gold); letter-spacing: 2px; }
+  .google-rating .rating-num { font-weight: 800; font-family: var(--font-display); }
+  .google-rating .review-count { color: var(--muted); font-size: 14px; }
+  .google-details { list-style: none; margin: 0 0 14px; padding: 0; color: var(--ink); }
+  .google-details li { padding: 6px 0; border-bottom: 1px solid var(--line-soft); }
+  .google-details li:last-child { border-bottom: none; }
+  .google-details .lbl { color: var(--cyan); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; display: block; margin-bottom: 1px; }
+
+  footer { text-align: center; color: #7e90ad; font-size: 12.5px; margin-top: 32px; }
+  footer a { color: #7e90ad; }
+
+  @media (max-width: 480px) {
+    .phone-grid { grid-template-columns: 1fr; }
+    h1 { font-size: 26px; }
+    .lookup-form { flex-direction: column; }
+    .lookup-form button { width: 100%; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <img class="logo" src="logo.jpg" alt="Fixtings Ja logo">
+    <h1>Fixtings Ja</h1>
+    <p class="tagline">Phone repair &amp; phones for sale — Falmouth, Trelawny</p>
+    <p class="updated" id="updatedLine" hidden></p>
+  </header>
+
+  <section aria-labelledby="servicesHeading">
+    <h2 id="servicesHeading">Repairs &amp; services</h2>
+    <p class="section-sub">Prices in Jamaican dollars (JMD). Message us on WhatsApp for an exact quote.</p>
+    <div class="card">
+      <ul class="service-list" id="serviceList"></ul>
+    </div>
+  </section>
+
+  <section aria-labelledby="phonesHeading">
+    <h2 id="phonesHeading">Phones for sale</h2>
+    <p class="section-sub">Available now in store. Message us on WhatsApp to reserve one.</p>
+    <div class="phone-grid" id="phoneGrid"></div>
+    <p class="empty-note" id="phonesEmpty" hidden>No phones in stock right now — message us on WhatsApp and we will let you know what is coming in.</p>
+  </section>
+
+  <section aria-labelledby="repairHeading">
+    <h2 id="repairHeading">Request a repair</h2>
+    <p class="section-sub">Tell us what is wrong with your phone and we will get back to you.</p>
+    <a class="btn" href="https://wa.me/18768324189?text=Hi%20Fixtings%20Ja%2C%20I%27d%20like%20to%20request%20a%20repair.">Request repair on WhatsApp</a>
+    <div class="btn-row">
+      <a class="btn secondary" href="https://wa.me/18768324189">Chat on WhatsApp — 876-832-4189</a>
+    </div>
+  </section>
+
+  <section aria-labelledby="statusHeading">
+    <h2 id="statusHeading">Check your repair status</h2>
+    <p class="section-sub">Enter your ticket number and we will show the status of your repair.</p>
+    <div class="card">
+      <form class="lookup-form" id="lookupForm">
+        <input type="text" id="ticketInput" placeholder="Ticket number, e.g. T-1234" autocomplete="off" aria-label="Ticket number">
+        <button type="submit">Check status</button>
+      </form>
+      <p class="lookup-result" id="lookupResult" hidden></p>
+    </div>
+  </section>
+
+  <section aria-labelledby="googleHeading">
+    <h2 id="googleHeading">Find us on Google</h2>
+    <p class="section-sub">Directions, reviews and contact details</p>
+    <div class="card">
+      <p class="google-rating"><span class="stars" aria-label="5 out of 5 stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span> <span class="rating-num">5.0</span> <span class="review-count">(4 reviews)</span></p>
+      <ul class="google-details">
+        <li><span class="lbl">Shop</span>Fixtings tronicare — mobile phone repair shop</li>
+        <li><span class="lbl">Address</span>Shop #8 Tnb plaza, 13 Market St, Falmouth</li>
+        <li><span class="lbl">Hours</span>Monday–Saturday 10:00 am–5:00 pm, Sunday closed</li>
+        <li><span class="lbl">Phone</span>(876) 832-4189</li>
+      </ul>
+      <a class="btn secondary" href="https://share.google/mZS7o9gOicLFZYQ2F" target="_blank" rel="noopener">Find us on Google</a>
+    </div>
+  </section>
+
+  <footer>
+    Fixtings Ja &middot; Falmouth, Trelawny, Jamaica &middot; WhatsApp <a href="https://wa.me/18768324189">876-832-4189</a><br>
+    Prices in Jamaican dollars (JMD)
+  </footer>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // Built-in fallback services, shown when no live data is published yet.
+  // Prices are "from" prices in Jamaican dollars.
+  var FALLBACK_SERVICES = [
+    { name: "Cracked screen", price: 9500 },
+    { name: "Touch not responding", price: 6500 },
+    { name: "Battery drains fast", price: 5500 },
+    { name: "Phone won't turn on", price: 4500 },
+    { name: "Charging port loose / not charging", price: 4500 },
+    { name: "Phone overheats", price: 3500 },
+    { name: "No sound / speaker not working", price: 4500 },
+    { name: "Microphone not working", price: 4500 },
+    { name: "Camera not working", price: 6500 },
+    { name: "Water damage", price: 7500 },
+    { name: "Stuck on logo / software issue", price: 3500 },
+    { name: "Back glass cracked", price: 7500 },
+    { name: "Earpiece not working", price: 4500 },
+    { name: "Buttons not working", price: 3500 }
+  ];
+
+  var TRACKING_OFF_MSG = "Repair tracking isn't switched on yet — message us on WhatsApp with your ticket number and we'll check it for you.";
+
+  var liveTickets = [];
+  var trackingAvailable = false;
+
+  function escapeHtml(value) {
+    return String(value == null ? "" : value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function formatJMD(value) {
+    var n = Number(value);
+    if (!isFinite(n)) return null;
+    return "J$" + n.toLocaleString("en-JM", { maximumFractionDigits: 0 });
+  }
+
+  function moneyText(value) {
+    var formatted = formatJMD(value);
+    return formatted === null ? String(value) : formatted;
+  }
+
+  function renderServices(services) {
+    var list = document.getElementById("serviceList");
+    var use = (Array.isArray(services) && services.length > 0) ? services : FALLBACK_SERVICES;
+    var html = "";
+    use.forEach(function (s) {
+      var name = escapeHtml(s.name || "");
+      if (!name) return;
+      var priceHtml = "";
+      if (s.price !== undefined && s.price !== null && s.price !== "") {
+        priceHtml = '<span class="service-price"><span class="from">from </span>' + escapeHtml(moneyText(s.price)) + "</span>";
+      }
+      var noteHtml = s.note ? '<span class="service-note">' + escapeHtml(s.note) + "</span>" : "";
+      html += "<li><span class=\"service-name\">" + name + noteHtml + "</span>" + priceHtml + "</li>";
+    });
+    list.innerHTML = html;
+  }
+
+  function renderPhones(phones) {
+    var grid = document.getElementById("phoneGrid");
+    var empty = document.getElementById("phonesEmpty");
+    var list = (Array.isArray(phones) ? phones : []).filter(function (p) {
+      return p && p.price !== undefined && p.price !== null && p.price !== "" && Number(p.price) > 0;
+    });
+    if (list.length === 0) {
+      grid.innerHTML = "";
+      empty.hidden = false;
+      return;
+    }
+    empty.hidden = true;
+    var html = "";
+    list.forEach(function (p) {
+      var title = [p.brand, p.model].filter(Boolean).join(" ");
+      var details = [p.storage, p.condition].filter(Boolean).join(" · ");
+      var photo = (typeof p.photo === "string" && p.photo) ? p.photo : "";
+      // Only allow data: image URLs or http(s) URLs for photos.
+      var safePhoto = (/^(data:image\/[a-zA-Z0-9.+-]+;base64,|https?:\/\/)/.test(photo)) ? photo : "";
+      html += '<div class="phone">';
+      if (safePhoto) {
+        html += '<img src="' + escapeHtml(safePhoto) + '" alt="' + escapeHtml(title || "Phone for sale") + '">';
+      }
+      html += '<div class="phone-name">' + escapeHtml(title || "Phone") + "</div>";
+      if (details) html += '<div class="phone-detail">' + escapeHtml(details) + "</div>";
+      html += '<div class="phone-price">' + escapeHtml(moneyText(p.price)) + "</div>";
+      html += "</div>";
+    });
+    grid.innerHTML = html;
+  }
+
+  function renderUpdated(updatedAt) {
+    var line = document.getElementById("updatedLine");
+    if (!updatedAt) { line.hidden = true; return; }
+    var d = new Date(updatedAt);
+    var text = isNaN(d.getTime())
+      ? String(updatedAt)
+      : d.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+    line.textContent = "Last updated: " + text;
+    line.hidden = false;
+  }
+
+  function normaliseTicket(value) {
+    return String(value || "").replace(/[\s-]/g, "").toUpperCase();
+  }
+
+  function onLookupSubmit(event) {
+    event.preventDefault();
+    var input = document.getElementById("ticketInput");
+    var result = document.getElementById("lookupResult");
+    var query = normaliseTicket(input.value);
+    result.hidden = false;
+    result.classList.remove("found");
+    if (!trackingAvailable) {
+      result.textContent = TRACKING_OFF_MSG;
+      return;
+    }
+    if (!query) {
+      result.textContent = "Please enter your ticket number.";
+      return;
+    }
+    var found = null;
+    for (var i = 0; i < liveTickets.length; i++) {
+      var t = liveTickets[i] || {};
+      if (normaliseTicket(t.number) === query) { found = t; break; }
+    }
+    if (!found) {
+      result.textContent = "We couldn't find that ticket number — please check the number or message us on WhatsApp and we'll check it for you.";
+      return;
+    }
+    // Status + device only. Never customer name, price, or notes.
+    var device = found.device ? String(found.device) : "your device";
+    var status = found.status ? String(found.status) : "In progress";
+    result.classList.add("found");
+    result.innerHTML = "Ticket <span class=\"ticket-no\">" + escapeHtml(found.number) + "</span> — " +
+      escapeHtml(device) + " — Status: <span class=\"status\">" + escapeHtml(status) + "</span>";
+  }
+
+  document.getElementById("lookupForm").addEventListener("submit", onLookupSubmit);
+
+  // Render the fallback showcase immediately, so the page is never blank.
+  renderServices(null);
+  renderPhones([]);
+  renderUpdated(null);
+
+  // Then try the live published data; any failure keeps the fallback.
+  fetch("/api/public")
+    .then(function (res) {
+      if (!res.ok) throw new Error("fetch failed");
+      return res.json();
+    })
+    .then(function (data) {
+      if (!data || typeof data !== "object") return;
+      if (Array.isArray(data.services) && data.services.length > 0) renderServices(data.services);
+      if (Array.isArray(data.phones) && data.phones.length > 0) renderPhones(data.phones);
+      if (Array.isArray(data.tickets) && data.tickets.length > 0) {
+        liveTickets = data.tickets;
+        trackingAvailable = true;
+      }
+      if (data.updatedAt) renderUpdated(data.updatedAt);
+    })
+    .catch(function () {
+      // Fallback showcase stays in place.
+    });
+})();
+</script>
+</body>
+</html>

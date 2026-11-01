@@ -59,6 +59,7 @@ function loadDB() {
     if (keepRole) DB.role = keepRole;
     saveDB();
   }
+  ensureSettingsDefaults();
 }
 
 // True when every record is a sample and at least one sample exists.
@@ -70,6 +71,40 @@ function onlySampleData(db) {
   return (db.parts || []).every(function (p) { return p.isSeed; });
 }
 function saveDB() { localStorage.setItem(LS_KEY, JSON.stringify(DB)); }
+
+// Repair services shown on the customer page. Each common issue maps to a
+// part type; the starting price is the cheapest matching part in the
+// catalog, or a sensible default where no part type fits the issue.
+var SERVICE_PART_TYPE = {
+  'Cracked screen': 'screen', 'Touch not responding': 'screen',
+  'Battery drains fast': 'battery', "Phone won't turn on": 'battery',
+  'Charging port loose / not charging': 'chargeport', 'Phone overheats': 'battery',
+  'No sound / speaker not working': 'loudspeaker', 'Camera not working': 'rearcam',
+  'Back glass cracked': 'backglass', "Earpiece not working (can't hear calls)": 'earpiece',
+  'Buttons not working (power/volume)': 'flex'
+};
+var SERVICE_DEFAULT_PRICE = {
+  'Microphone not working': 4500, 'Water damage': 7500, 'Stuck on logo / software issue': 3500
+};
+function cheapestPartPrice(parts, typeKey) {
+  var prices = parts.filter(function (p) { return p.type === typeKey; }).map(function (p) { return p.price; });
+  return prices.length ? Math.min.apply(null, prices) : 0;
+}
+function buildDefaultServices(parts) {
+  return COMMON_ISSUES.map(function (issue) {
+    var typeKey = SERVICE_PART_TYPE[issue];
+    var price = typeKey ? cheapestPartPrice(parts, typeKey) : 0;
+    if (!price) price = SERVICE_DEFAULT_PRICE[issue] || 5000;
+    return { name: issue, price: price, note: '' };
+  });
+}
+// Settings fields added after seed v2 — fill them in for installs that
+// were seeded before they existed. Never touches records.
+function ensureSettingsDefaults() {
+  if (!DB.settings) DB.settings = { shopName: 'Fixtings POS', shopContact: '', staff: ['Sheldon'] };
+  if (!DB.settings.services) DB.settings.services = buildDefaultServices(DB.parts || []);
+  if (typeof DB.settings.publishKey !== 'string') DB.settings.publishKey = '';
+}
 
 function seedDB() {
   var parts = buildCatalog();
@@ -114,7 +149,9 @@ function seedDB() {
     settings: {
       shopName: 'Fixtings POS',
       shopContact: 'Fixtings Ja, Falmouth, Trelawny',
-      staff: ['Sheldon', 'Kemar']
+      staff: ['Sheldon', 'Kemar'],
+      services: buildDefaultServices(parts),
+      publishKey: ''
     },
     role: 'owner',
     customers: customers,
@@ -149,6 +186,63 @@ var reportDays = 14;
 var specDevice = 'IP13';  // mcode of the device shown in Device Specs
 var specTab = 'device';   // 'device' | 'shared'
 var specType = '';        // part type selected in the compatibility lookup
+
+// ---------------- pagination & list search ----------------
+var PAGE_SIZE = 10;
+var partsPage = 1, ticketPage = 1, customerPage = 1, phonePage = 1, orderPage = 1;
+var partsTab = 'inventory'; // 'inventory' | 'order'
+var ticketQuery = '', customerQuery = '', phoneQuery = '';
+var pendingPhonePhoto = ''; // data URL of the photo picked in the phone form
+
+function pageCount(total) { return Math.max(1, Math.ceil(total / PAGE_SIZE)); }
+function clampPage(p, total) {
+  var n = pageCount(total);
+  if (p < 1) return 1;
+  if (p > n) return n;
+  return p;
+}
+function pageSlice(list, page) { return list.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE); }
+function pagerHtml(current, total, fnName) {
+  var n = pageCount(total);
+  return '<div class="pager"><button class="btn small" ' + (current <= 1 ? 'disabled' : '') + ' onclick="App.' + fnName + '(' + (current - 1) + ')">\u2190 Prev</button>' +
+    '<span class="pager-label">Page ' + current + ' of ' + n + '</span>' +
+    '<button class="btn small" ' + (current >= n ? 'disabled' : '') + ' onclick="App.' + fnName + '(' + (current + 1) + ')">Next \u2192</button></div>';
+}
+
+// Add days to a YYYY-MM-DD date, returning YYYY-MM-DD.
+function addDaysStr(iso, n) {
+  var d = new Date(String(iso).slice(0, 10) + 'T00:00:00');
+  if (isNaN(d.getTime())) return '';
+  d.setDate(d.getDate() + n);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+// True while a collected ticket's warranty still covers today.
+function warrantyActive(t) {
+  return !!(t && t.warrantyUntil && t.warrantyUntil >= todayStr());
+}
+
+// Normalize a customer phone number to the digits WhatsApp needs (Jamaica):
+// 10 digits starting 876 -> prefix 1; 7 digits -> prefix 1876; 11 digits
+// starting 1 -> as-is. Anything else is unusable -> ''.
+function normalizeWaPhone(raw) {
+  var d = String(raw || '').replace(/\D/g, '');
+  if (!d) return '';
+  if (d.length === 11 && d.charAt(0) === '1') return d;
+  if (d.length === 10 && d.indexOf('876') === 0) return '1' + d;
+  if (d.length === 7) return '1876' + d;
+  return '';
+}
+// wa.me link that tells the customer their repair is ready, or '' when the
+// ticket's customer has no usable phone number.
+function waReadyLink(t) {
+  var c = DB.customers.find(function (x) { return x.id === t.customerId; });
+  var phone = normalizeWaPhone(c ? c.phone : '');
+  if (!phone) return '';
+  var bal = Math.max(0, (t.quoted || 0) - (t.deposit || 0));
+  var msg = 'Hi ' + (t.customerName || 'there') + ', your ' + t.brand + ' ' + t.model +
+    ' is ready for collection at Fixtings Ja, Falmouth. Balance due: ' + fmt(bal) + '.';
+  return 'https://wa.me/' + phone + '?text=' + encodeURIComponent(msg);
+}
 
 // ---------------- modal helpers ----------------
 function openModal(html) {
@@ -211,14 +305,27 @@ function renderView() {
   else v.innerHTML = viewDashboard();
   bindViewInputs();
   if (currentView === 'pos') { renderPOSResults(); renderCart(); }
-  if (currentView === 'parts') { renderPartsTable(); }
+  if (currentView === 'parts') {
+    if (partsTab === 'order') renderOrderTable();
+    else renderPartsTable();
+  }
+  if (currentView === 'customers') renderCustomersTable();
+  if (currentView === 'repairs') renderTicketsTable();
+  if (currentView === 'phones') renderPhonesTable();
+  if (currentView === 'settings') { renderServicesEditor(); updatePublishKeyState(); }
 }
 
 function bindViewInputs() {
   var pq = $('#posSearch');
   if (pq) { pq.value = posQuery; pq.addEventListener('input', function () { posQuery = pq.value; renderPOSResults(); }); }
   var pf = $('#partsSearch');
-  if (pf) { pf.value = partsFilter.q; pf.addEventListener('input', function () { partsFilter.q = pf.value; renderPartsTable(); }); }
+  if (pf) { pf.value = partsFilter.q; pf.addEventListener('input', function () { partsFilter.q = pf.value; partsPage = 1; renderPartsTable(); }); }
+  var cq = $('#customerSearch');
+  if (cq) { cq.value = customerQuery; cq.addEventListener('input', function () { customerQuery = cq.value; customerPage = 1; renderCustomersTable(); }); }
+  var tq = $('#ticketSearch');
+  if (tq) { tq.value = ticketQuery; tq.addEventListener('input', function () { ticketQuery = tq.value; ticketPage = 1; renderTicketsTable(); }); }
+  var hq = $('#phoneSearch');
+  if (hq) { hq.value = phoneQuery; hq.addEventListener('input', function () { phoneQuery = hq.value; phonePage = 1; renderPhonesTable(); }); }
 }
 
 // ---------------- dashboard ----------------
@@ -408,15 +515,33 @@ function showReceipt(sale) {
 function viewCustomers() {
   return '' +
   '<h1>Customers</h1><p class="sub">' + DB.customers.length + ' customers on file.</p>' +
-  '<div class="row-end"><button class="btn primary" onclick="App.customerForm()">+ Add customer</button></div>' +
-  '<div class="card"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Notes</th><th></th></tr></thead><tbody>' +
-  DB.customers.map(function (c) {
+  '<div class="toolbar"><input id="customerSearch" class="input inline grow" type="search" placeholder="Search name or phone…">' +
+  '<button class="btn primary" onclick="App.customerForm()">+ Add customer</button></div>' +
+  '<div class="card"><div id="customersTable"></div></div>';
+}
+function filteredCustomers() {
+  var q = customerQuery.trim();
+  return DB.customers.filter(function (c) {
+    return matchesQuery(c.name + ' ' + (c.phone || '') + ' ' + (c.email || ''), q);
+  });
+}
+function renderCustomersTable() {
+  var box = $('#customersTable');
+  if (!box) return;
+  var list = filteredCustomers();
+  customerPage = clampPage(customerPage, list.length);
+  var page = pageSlice(list, customerPage);
+  box.innerHTML = '<p class="muted small">Showing ' + page.length + ' of ' + list.length + ' customers.</p>' +
+  '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Notes</th><th></th></tr></thead><tbody>' +
+  (page.length ? page.map(function (c) {
     return '<tr><td><a href="javascript:void(0)" onclick="App.customerDetail(\'' + c.id + '\')"><strong>' + esc(c.name) + '</strong></a>' + (c.isSample ? ' <span class="tag">sample</span>' : '') + '</td>' +
       '<td>' + esc(c.phone) + '</td><td>' + esc(c.email || '—') + '</td><td>' + esc(c.notes || '') + '</td>' +
       '<td class="r"><button class="btn small" onclick="App.customerForm(\'' + c.id + '\')">Edit</button> ' +
       '<button class="btn small danger" onclick="App.deleteCustomer(\'' + c.id + '\')">Delete</button></td></tr>';
-  }).join('') + '</tbody></table></div></div>';
+  }).join('') : '<tr><td colspan="5" class="muted">No customers match.</td></tr>') + '</tbody></table></div>' +
+  pagerHtml(customerPage, list.length, 'setCustomerPage');
 }
+function setCustomerPage(n) { customerPage = clampPage(n, filteredCustomers().length); renderCustomersTable(); }
 
 function customerForm(id) {
   var c = id ? DB.customers.find(function (x) { return x.id === id; }) : null;
@@ -471,22 +596,44 @@ var TICKET_STATUSES = ['Received', 'Diagnosing', 'Awaiting Parts', 'In Repair', 
 var STATUS_CLASS = { 'Received': 'st-Received', 'Diagnosing': 'st-Diagnosing', 'Awaiting Parts': 'st-AwaitingParts', 'In Repair': 'st-InRepair', 'Ready': 'st-Ready', 'Collected': 'st-Collected' };
 
 function viewRepairs() {
-  var list = DB.tickets.slice().sort(function (a, b) { return (b.createdAt || '').localeCompare(a.createdAt || ''); });
-  if (ticketFilter) list = list.filter(function (t) { return t.status === ticketFilter; });
   return '' +
   '<h1>Repair Tickets</h1><p class="sub">' + openTickets().length + ' open &middot; ' + DB.tickets.length + ' total.</p>' +
   '<div class="toolbar"><select class="input inline" onchange="App.setTicketFilter(this.value)"><option value="">All statuses</option>' +
     TICKET_STATUSES.map(function (s) { return '<option value="' + s + '"' + (ticketFilter === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select> ' +
+    '<input id="ticketSearch" class="input inline grow" type="search" placeholder="Search customer, device, issue or ticket no…">' +
     '<button class="btn primary" onclick="App.ticketForm()">+ New repair ticket</button></div>' +
-  '<div class="card"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Customer</th><th>Device</th><th>Issue</th><th>Technician</th><th>Status</th><th class="r">Quoted</th><th class="r">Balance</th><th></th></tr></thead><tbody>' +
-  (list.length ? list.map(function (t) {
-    var bal = Math.max(0, (t.quoted || 0) - (t.deposit || 0));
-    return '<tr><td>' + esc(t.customerName) + '</td><td>' + esc(t.brand + ' ' + t.model) + '</td><td>' + esc(t.issue) + '</td><td>' + esc(t.technician || '—') + '</td>' +
-      '<td><span class="badge ' + (STATUS_CLASS[t.status] || '') + '">' + esc(t.status) + '</span></td><td class="r">' + fmt(t.quoted) + '</td><td class="r">' + fmt(bal) + '</td>' +
-      '<td class="r"><button class="btn small" onclick="App.ticketDetail(\'' + t.id + '\')">Open</button></td></tr>';
-  }).join('') : '<tr><td colspan="8" class="muted">No tickets match.</td></tr>') + '</tbody></table></div></div>';
+  '<div class="card"><div id="ticketsTable"></div></div>';
 }
-function setTicketFilter(v) { ticketFilter = v; renderView(); }
+function filteredTickets() {
+  var list = DB.tickets.slice().sort(function (a, b) { return (b.createdAt || '').localeCompare(a.createdAt || ''); });
+  if (ticketFilter) list = list.filter(function (t) { return t.status === ticketFilter; });
+  var q = ticketQuery.trim();
+  if (q) list = list.filter(function (t) {
+    return matchesQuery(t.customerName + ' ' + t.brand + ' ' + t.model + ' ' + t.issue + ' ' + t.id, q);
+  });
+  return list;
+}
+function renderTicketsTable() {
+  var box = $('#ticketsTable');
+  if (!box) return;
+  var list = filteredTickets();
+  ticketPage = clampPage(ticketPage, list.length);
+  var page = pageSlice(list, ticketPage);
+  box.innerHTML = '<p class="muted small">Showing ' + page.length + ' of ' + list.length + ' tickets.</p>' +
+  '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Customer</th><th>Device</th><th>Issue</th><th>Technician</th><th>Status</th><th class="r">Quoted</th><th class="r">Balance</th><th></th></tr></thead><tbody>' +
+  (page.length ? page.map(function (t) {
+    var bal = Math.max(0, (t.quoted || 0) - (t.deposit || 0));
+    var wa = (t.status === 'Ready') ? waReadyLink(t) : '';
+    return '<tr><td>' + esc(t.customerName) + '</td><td>' + esc(t.brand + ' ' + t.model) + '</td><td>' + esc(t.issue) + '</td><td>' + esc(t.technician || '—') + '</td>' +
+      '<td><span class="badge ' + (STATUS_CLASS[t.status] || '') + '">' + esc(t.status) + '</span>' +
+      (warrantyActive(t) ? ' <span class="badge warr">Warranty until ' + dstr(t.warrantyUntil) + '</span>' : '') + '</td><td class="r">' + fmt(t.quoted) + '</td><td class="r">' + fmt(bal) + '</td>' +
+      '<td class="r">' + (wa ? '<a class="btn small wa-btn" target="_blank" rel="noopener" href="' + esc(wa) + '">WhatsApp</a> ' : '') +
+      '<button class="btn small" onclick="App.ticketDetail(\'' + t.id + '\')">Open</button></td></tr>';
+  }).join('') : '<tr><td colspan="8" class="muted">No tickets match.</td></tr>') + '</tbody></table></div>' +
+  pagerHtml(ticketPage, list.length, 'setTicketPage');
+}
+function setTicketPage(n) { ticketPage = clampPage(n, filteredTickets().length); renderTicketsTable(); }
+function setTicketFilter(v) { ticketFilter = v; ticketPage = 1; renderView(); }
 
 function ticketForm() {
   openModal('<h3>New repair ticket</h3>' +
@@ -558,10 +705,12 @@ function ticketDetail(id) {
   var bal = Math.max(0, (t.quoted || 0) - (t.deposit || 0));
   var partsTotal = t.partsUsed.reduce(function (s, p) { return s + p.price * p.qty; }, 0);
   var labour = Math.max(0, (t.quoted || 0) - partsTotal);
+  var wa = (t.status === 'Ready') ? waReadyLink(t) : '';
   openModal('<h3>' + esc(t.brand + ' ' + t.model) + ' — ' + esc(t.customerName) + '</h3>' +
     '<p class="muted">Ticket ' + esc(t.id) + ' &middot; opened ' + dstr(t.createdAt) + '</p>' +
     '<p><strong>Issue:</strong> ' + esc(t.issue) + '</p>' +
     '<p><strong>Status:</strong> <span class="badge ' + (STATUS_CLASS[t.status] || '') + '">' + esc(t.status) + '</span></p>' +
+    (t.warrantyUntil ? '<p><strong>Warranty until:</strong> ' + dstr(t.warrantyUntil) + (warrantyActive(t) ? ' <span class="badge warr">In warranty</span>' : ' <span class="muted small">(expired)</span>') + '</p>' : '') +
     '<div class="status-flow">' + TICKET_STATUSES.map(function (s) {
       return '<button class="btn small' + (t.status === s ? ' primary' : '') + '" onclick="App.setTicketStatus(\'' + t.id + '\',\'' + s + '\')">' + s + '</button>';
     }).join('') + '</div>' +
@@ -592,6 +741,7 @@ function ticketDetail(id) {
       '</select><button class="btn" onclick="App.attachPart(\'' + t.id + '\')">Attach part</button></div>' : '') +
     '<p class="muted small">Labour portion of quote: ' + fmt(labour) + ' (quoted price less parts used).</p>' +
     '<div class="row-end">' +
+      (t.status === 'Ready' ? (wa ? '<a class="btn primary wa-btn" target="_blank" rel="noopener" href="' + esc(wa) + '">WhatsApp customer — ready</a> ' : '<span class="muted small">No usable phone number for WhatsApp</span> ') : '') +
       (t.status !== 'Collected' ? '<button class="btn primary" onclick="App.collectTicket(\'' + t.id + '\')">Mark collected &amp; take final payment</button>' : '<span class="tag">Collected</span>') +
       ' <button class="btn danger" onclick="App.deleteTicket(\'' + t.id + '\')">Delete ticket</button>' +
       ' <button class="btn" onclick="App.closeModal()">Close</button></div>');
@@ -640,6 +790,8 @@ function collectTicket(id) {
     '<form onsubmit="App.finishCollect(event,\'' + t.id + '\')">' +
     '<label class="lbl">Final payment method</label><div class="pay-row">' +
     ['Cash', 'Card', 'Transfer'].map(function (m) { return '<label class="pay-opt"><input type="radio" name="payMethod" value="' + m + '"' + (m === 'Cash' ? ' checked' : '') + '> ' + m + '</label>'; }).join('') + '</div>' +
+    '<label class="lbl">Warranty on this repair</label><div class="pay-row">' +
+    [30, 90, 0].map(function (d) { return '<label class="pay-opt"><input type="radio" name="warrantyDays" value="' + d + '"' + (d === 30 ? ' checked' : '') + '> ' + (d === 0 ? 'No warranty' : d + ' days') + '</label>'; }).join('') + '</div>' +
     '<div class="row-end"><button type="button" class="btn" onclick="App.ticketDetail(\'' + t.id + '\')">Back</button><button class="btn primary" type="submit">Record payment &amp; mark collected</button></div></form>');
 }
 function finishCollect(ev, id) {
@@ -656,6 +808,11 @@ function finishCollect(ev, id) {
   if (labour > 0) items.push({ kind: 'repair', refId: t.id, label: 'Repair labour — ' + t.brand + ' ' + t.model, price: labour, qty: 1 });
   DB.sales.push({ id: uid('S-'), date: todayStr(), customerId: t.customerId, customerName: t.customerName, payment: pay, items: items, total: bal, isSample: false, createdAt: new Date().toISOString(), repairId: t.id });
   t.status = 'Collected'; t.updatedAt = todayStr();
+  var wDays = 30;
+  var wChecked = document.querySelector('input[name="warrantyDays"]:checked');
+  if (wChecked) wDays = parseInt(wChecked.value, 10) || 0;
+  if (wDays > 0) { t.warrantyDays = wDays; t.warrantyUntil = addDaysStr(todayStr(), wDays); }
+  else { t.warrantyDays = 0; t.warrantyUntil = ''; }
   saveDB(); closeModal(); renderView();
   toast('Collected — ' + fmt(bal) + ' received');
 }
@@ -688,9 +845,17 @@ function filteredParts() {
 }
 function viewParts() {
   var brands = ['Apple', 'Samsung', 'Google', 'Xiaomi', 'Poco', 'Huawei', 'Motorola', 'Infinix', 'Tecno'];
-  return '' +
-  '<h1>Parts &amp; Inventory</h1><p class="sub">' + DB.parts.length + ' parts in the catalog &middot; ' + lowStock().length + ' at or below threshold. ' +
-  (canSeeCosts() ? 'Costs shown (owner only).' : 'Costs hidden for your role.') + '</p>' +
+  var head = '<h1>Parts &amp; Inventory</h1><p class="sub">' + DB.parts.length + ' parts in the catalog &middot; ' + lowStock().length + ' at or below threshold. ' +
+    (canSeeCosts() ? 'Costs shown (owner only).' : 'Costs hidden for your role.') + '</p>' +
+    '<div class="tabs"><button class="btn small' + (partsTab === 'inventory' ? ' primary' : '') + '" onclick="App.setPartsTab(\'inventory\')">Inventory</button> ' +
+    '<button class="btn small' + (partsTab === 'order' ? ' primary' : '') + '" onclick="App.setPartsTab(\'order\')">Order list (' + lowStock().length + ')</button></div>';
+  if (partsTab === 'order') {
+    return head + '<div class="card"><h2>Low-stock order list</h2>' +
+      '<p class="muted small">Every part at or below its threshold. Suggested order brings stock up to 5.</p>' +
+      '<div class="row-end" style="margin-top:0"><button class="btn primary" onclick="App.copyOrderList()">Copy order list</button></div>' +
+      '<div id="orderTable"></div></div>';
+  }
+  return head +
   '<div class="card filters"><div class="row wrap">' +
     '<select class="input inline" onchange="App.setPartsFilter(\'brand\',this.value)"><option value="">All brands</option>' +
     brands.map(function (b) { return '<option' + (partsFilter.brand === b ? ' selected' : '') + '>' + b + '</option>'; }).join('') + '</select>' +
@@ -707,9 +872,11 @@ function viewParts() {
 function renderPartsTable() {
   var box = $('#partsTable');
   if (!box) return;
-  var list = filteredParts().slice(0, 200);
+  var all = filteredParts();
+  partsPage = clampPage(partsPage, all.length);
+  var list = pageSlice(all, partsPage);
   var costs = canSeeCosts();
-  box.innerHTML = '<p class="muted small">Showing ' + list.length + ' of ' + DB.parts.length + ' parts' + (filteredParts().length > 200 ? ' (first 200 — narrow the filters)' : '') + '.</p>' +
+  box.innerHTML = '<p class="muted small">Showing ' + list.length + ' of ' + all.length + ' parts.</p>' +
   '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>SKU</th><th>Part</th><th>Device</th><th>Also fits</th><th class="r">Stock</th>' + (costs ? '<th class="r">Cost</th>' : '') + '<th class="r">Price</th><th class="r">Threshold</th><th></th></tr></thead><tbody>' +
   (list.length ? list.map(function (p) {
     var low = p.stock <= p.threshold;
@@ -724,11 +891,61 @@ function renderPartsTable() {
       (costs ? '<td class="r">' + fmt(p.cost) + '</td>' : '') +
       '<td class="r">' + fmt(p.price) + '</td><td class="r">' + p.threshold + '</td>' +
       '<td class="r">' + (role() === 'owner' ? '<button class="btn small" onclick="App.partForm(\'' + p.id + '\')">Edit</button> <button class="btn small danger" onclick="App.deletePart(\'' + p.id + '\')">Delete</button>' : '<span class="muted small">view only</span>') + '</td></tr>';
-  }).join('') : '<tr><td colspan="9" class="muted">No parts match these filters.</td></tr>') + '</tbody></table></div>';
+  }).join('') : '<tr><td colspan="9" class="muted">No parts match these filters.</td></tr>') + '</tbody></table></div>' +
+  pagerHtml(partsPage, all.length, 'setPartsPage');
+}
+function setPartsPage(n) { partsPage = clampPage(n, filteredParts().length); renderPartsTable(); }
+function setPartsTab(v) { partsTab = v; orderPage = 1; partsPage = 1; renderView(); }
+
+// ---------------- low-stock order list ----------------
+function orderListItems() {
+  return lowStock().slice().sort(function (a, b) {
+    var x = (a.brand + ' ' + a.model + ' ' + a.label).toLowerCase();
+    var y = (b.brand + ' ' + b.model + ' ' + b.label).toLowerCase();
+    return x < y ? -1 : (x > y ? 1 : 0);
+  });
+}
+function orderQty(p) { return Math.max(0, 5 - p.stock); }
+function orderListText() {
+  return orderListItems().map(function (p) {
+    return p.sku + ' \u2014 ' + p.label + ' (' + p.brand + ' ' + p.model + ') \u2014 stock ' + p.stock + ', order ' + orderQty(p);
+  }).join('\n');
+}
+function renderOrderTable() {
+  var box = $('#orderTable');
+  if (!box) return;
+  var list = orderListItems();
+  orderPage = clampPage(orderPage, list.length);
+  var page = pageSlice(list, orderPage);
+  box.innerHTML = '<p class="muted small">Showing ' + page.length + ' of ' + list.length + ' parts to order.</p>' +
+  '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>SKU</th><th>Part</th><th>Device</th><th class="r">Stock</th><th class="r">Threshold</th><th class="r">Order</th></tr></thead><tbody>' +
+  (page.length ? page.map(function (p) {
+    return '<tr><td>' + esc(p.sku) + '</td><td>' + esc(p.label) + '</td><td>' + esc(p.brand + ' ' + p.model) + '</td><td class="r bad">' + p.stock + '</td><td class="r">' + p.threshold + '</td><td class="r"><strong>' + orderQty(p) + '</strong></td></tr>';
+  }).join('') : '<tr><td colspan="6" class="muted">Nothing low on stock.</td></tr>') + '</tbody></table></div>' +
+  pagerHtml(orderPage, list.length, 'setOrderPage');
+}
+function setOrderPage(n) { orderPage = clampPage(n, orderListItems().length); renderOrderTable(); }
+function copyOrderList() {
+  var text = orderListText();
+  if (!text) { toast('Nothing to copy — no low-stock parts'); return; }
+  function done() { toast('Order list copied (' + orderListItems().length + ' items)'); }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done, function () { fallbackCopy(text); done(); });
+  } else { fallbackCopy(text); done(); }
+}
+function fallbackCopy(text) {
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); } catch (e) { /* clipboard unavailable */ }
+  ta.remove();
 }
 function setPartsFilter(k, v) {
   partsFilter[k] = v;
   if (k === 'brand') partsFilter.model = '';
+  partsPage = 1;
   renderView();
 }
 function adjustStock(id, d) {
@@ -840,7 +1057,9 @@ function viewSpecDevice() {
   var html = '<div class="card"><label class="lbl">Device</label>' +
     '<select class="input" onchange="App.setSpecDevice(this.value)">' + specSelectOptions() + '</select>';
   if (spec) {
-    html += '<div class="spec-head"><div><h2>' + esc(spec.brand + ' ' + spec.model) + '</h2>' +
+    html += '<div class="spec-head">' +
+      (spec.img ? '<img class="spec-photo" src="' + esc(spec.img) + '" alt="' + esc(spec.brand + ' ' + spec.model) + '" loading="lazy" onerror="this.style.display=\'none\'">' : '') +
+      '<div><h2>' + esc(spec.brand + ' ' + spec.model) + '</h2>' +
       '<p class="muted small">Released ' + spec.year + ' &middot; Specs: <a href="' + esc(spec.url) + '" target="_blank" rel="noopener">GSMArena</a></p></div></div>' +
       '<div class="spec-grid">' +
       '<div class="spec-cell"><div class="spec-label">Display</div><div class="spec-value">' + spec.display + '&Prime; ' + esc(spec.panel) + '</div><div class="muted small">' + esc(spec.resolution) + ' &middot; ' + (spec.refresh ? spec.refresh + 'Hz' : '—') + '</div></div>' +
@@ -902,20 +1121,40 @@ function viewSharedParts() {
 function viewPhones() {
   return '' +
   '<h1>Phones for Sale</h1><p class="sub">' + availablePhones().length + ' available &middot; ' + DB.phones.length + ' listed.</p>' +
-  '<div class="row-end"><button class="btn primary" onclick="App.phoneForm()">+ Add phone</button></div>' +
-  '<div class="card"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Phone</th><th>Storage</th><th>Condition</th><th>IMEI / Serial</th><th class="r">Price</th><th>Status</th><th></th></tr></thead><tbody>' +
-  DB.phones.map(function (ph) {
-    return '<tr><td><strong>' + esc(ph.brand + ' ' + ph.model) + '</strong>' + (ph.isSample ? ' <span class="tag">sample</span>' : '') + '</td>' +
+  '<div class="toolbar"><input id="phoneSearch" class="input inline grow" type="search" placeholder="Search brand, model, storage or condition…">' +
+  '<button class="btn primary" onclick="App.phoneForm()">+ Add phone</button></div>' +
+  '<div class="card"><div id="phonesTable"></div></div>';
+}
+function filteredPhones() {
+  var q = phoneQuery.trim();
+  return DB.phones.filter(function (ph) {
+    return matchesQuery(ph.brand + ' ' + ph.model + ' ' + ph.storage + ' ' + ph.condition, q);
+  });
+}
+function renderPhonesTable() {
+  var box = $('#phonesTable');
+  if (!box) return;
+  var list = filteredPhones();
+  phonePage = clampPage(phonePage, list.length);
+  var page = pageSlice(list, phonePage);
+  box.innerHTML = '<p class="muted small">Showing ' + page.length + ' of ' + list.length + ' phones.</p>' +
+  '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Photo</th><th>Phone</th><th>Storage</th><th>Condition</th><th>IMEI / Serial</th><th class="r">Price</th><th>Status</th><th></th></tr></thead><tbody>' +
+  (page.length ? page.map(function (ph) {
+    return '<tr><td>' + (ph.photo ? '<img class="photo-thumb" src="' + esc(ph.photo) + '" alt="' + esc(ph.brand + ' ' + ph.model) + '" loading="lazy" onerror="this.style.display=\'none\'">' : '<span class="muted">—</span>') + '</td>' +
+      '<td><strong>' + esc(ph.brand + ' ' + ph.model) + '</strong>' + (ph.isSample ? ' <span class="tag">sample</span>' : '') + '</td>' +
       '<td>' + esc(ph.storage) + '</td><td>' + esc(ph.condition) + '</td><td>' + esc(ph.imei || '—') + '</td>' +
       '<td class="r">' + fmt(ph.price) + '</td><td><span class="badge ph-' + ph.status + '">' + esc(ph.status) + '</span></td>' +
       '<td class="r"><button class="btn small" onclick="App.phoneForm(\'' + ph.id + '\')">Edit</button> ' +
       (ph.status !== 'Sold' ? '<button class="btn small" onclick="App.setPhoneStatus(\'' + ph.id + '\',\'Sold\')">Mark sold</button> ' : '') +
       (ph.status !== 'Available' ? '<button class="btn small" onclick="App.setPhoneStatus(\'' + ph.id + '\',\'Available\')">Make available</button> ' : '') +
       '<button class="btn small danger" onclick="App.deletePhone(\'' + ph.id + '\')">Delete</button></td></tr>';
-  }).join('') + '</tbody></table></div></div>';
+  }).join('') : '<tr><td colspan="8" class="muted">No phones match.</td></tr>') + '</tbody></table></div>' +
+  pagerHtml(phonePage, list.length, 'setPhonePage');
 }
+function setPhonePage(n) { phonePage = clampPage(n, filteredPhones().length); renderPhonesTable(); }
 function phoneForm(id) {
   var ph = id ? DB.phones.find(function (x) { return x.id === id; }) : null;
+  pendingPhonePhoto = '';
   openModal('<h3>' + (ph ? 'Edit phone' : 'Add phone for sale') + '</h3>' +
     '<form onsubmit="App.savePhone(event,\'' + (ph ? ph.id : '') + '\')">' +
     '<div class="grid-2col"><div><label class="lbl">Brand *</label><select name="brand" class="input" required><option value="">Select…</option>' +
@@ -926,6 +1165,9 @@ function phoneForm(id) {
     '<div><label class="lbl">Condition *</label><select name="condition" class="input" required>' +
     ['Excellent', 'Good', 'Fair'].map(function (s) { return '<option' + (ph && ph.condition === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select></div></div>' +
     '<label class="lbl">IMEI / Serial</label><input name="imei" class="input" value="' + esc(ph ? ph.imei : '') + '">' +
+    '<label class="lbl">Photo (optional)</label>' +
+    '<input id="phonePhotoInput" type="file" class="input" accept="image/*" capture="environment" onchange="App.phonePhotoPicked(this)">' +
+    '<div id="phonePhotoPreview">' + (ph && ph.photo ? '<img class="photo-thumb-lg" src="' + esc(ph.photo) + '" alt="Current photo">' : '') + '</div>' +
     '<div class="grid-2col"><div><label class="lbl">Price (JMD) *</label><input name="price" type="number" min="0" step="1" class="input" required value="' + (ph ? ph.price : '') + '"></div>' +
     '<div><label class="lbl">Status</label><select name="status" class="input">' +
     ['Available', 'Reserved', 'Sold'].map(function (s) { return '<option' + (ph && ph.status === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select></div></div>' +
@@ -934,15 +1176,41 @@ function phoneForm(id) {
 function savePhone(ev, id) {
   ev.preventDefault();
   var f = ev.target;
-  var data = { brand: f.brand.value, model: f.model.value.trim(), storage: f.storage.value, condition: f.condition.value, imei: f.imei.value.trim(), price: num(f.price.value), status: f.status.value };
+  var data = { brand: field(f, 'brand'), model: field(f, 'model').trim(), storage: field(f, 'storage'), condition: field(f, 'condition'), imei: field(f, 'imei').trim(), price: num(field(f, 'price')), status: field(f, 'status') };
   if (!data.brand || !data.model || data.price <= 0) { toast('Brand, model and price are required'); return; }
   if (id) {
     var ph = DB.phones.find(function (x) { return x.id === id; });
-    if (ph) { ph.brand = data.brand; ph.model = data.model; ph.storage = data.storage; ph.condition = data.condition; ph.imei = data.imei; ph.price = data.price; ph.status = data.status; }
+    if (ph) { ph.brand = data.brand; ph.model = data.model; ph.storage = data.storage; ph.condition = data.condition; ph.imei = data.imei; ph.price = data.price; ph.status = data.status; ph.photo = pendingPhonePhoto || ph.photo || ''; }
   } else {
-    DB.phones.push({ id: uid('PH-'), brand: data.brand, model: data.model, storage: data.storage, condition: data.condition, imei: data.imei, price: data.price, status: data.status, isSample: false, createdAt: todayStr() });
+    DB.phones.push({ id: uid('PH-'), brand: data.brand, model: data.model, storage: data.storage, condition: data.condition, imei: data.imei, price: data.price, status: data.status, photo: pendingPhonePhoto || '', isSample: false, createdAt: todayStr() });
   }
+  pendingPhonePhoto = '';
   saveDB(); closeModal(); renderView(); toast('Phone saved');
+}
+// Downscale a picked phone photo in the browser (max 800px wide, JPEG ~0.8)
+// and keep it as a data URL until the phone is saved.
+function phonePhotoPicked(input) {
+  var file = input.files && input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function () {
+    var img = new Image();
+    img.onload = function () {
+      var scale = Math.min(1, 800 / img.width);
+      var canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(img.width * scale));
+      canvas.height = Math.max(1, Math.round(img.height * scale));
+      var ctx = canvas.getContext('2d');
+      if (!ctx) { toast('This browser cannot process photos'); return; }
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      pendingPhonePhoto = canvas.toDataURL('image/jpeg', 0.8);
+      var prev = document.getElementById('phonePhotoPreview');
+      if (prev) prev.innerHTML = '<img class="photo-thumb-lg" src="' + pendingPhonePhoto + '" alt="Phone photo">';
+    };
+    img.onerror = function () { toast('Could not read that photo'); };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
 }
 function setPhoneStatus(id, status) {
   var ph = DB.phones.find(function (x) { return x.id === id; });
@@ -1033,6 +1301,19 @@ function viewSettings() {
     '<label class="lbl">Shop contact / address</label><input name="shopContact" class="input" value="' + esc(DB.settings.shopContact) + '">' +
     '<label class="lbl">Technicians &amp; staff (one per line)</label><textarea name="staff" class="input" rows="3">' + esc(DB.settings.staff.join('\n')) + '</textarea>' +
     '<div class="row-end"><button class="btn primary" type="submit">Save settings</button></div></form></div>' +
+  '<div class="card"><h2>Customer page</h2>' +
+    '<p>Publish your phones for sale, services and repair statuses to the public customer page. Only public-safe info is sent — never IMEI, costs, customer names or phone numbers.</p>' +
+    '<p><a href="customer.html" target="_blank" rel="noopener">View the customer page &rarr;</a> &middot; <a href="https://share.google/mZS7o9gOicLFZYQ2F" target="_blank" rel="noopener">Find us on Google</a></p>' +
+    '<label class="lbl">Publish key</label>' +
+    '<input id="publishKeyInput" type="password" class="input" placeholder="Enter the publish key from Cloudflare" autocomplete="off">' +
+    '<p class="muted small" id="publishKeyState">No publish key saved yet.</p>' +
+    '<div class="row"><button class="btn" onclick="App.savePublishKey()">Save publish key</button> ' +
+    '<button class="btn primary" onclick="App.publishToCustomerPage()">Publish to customer page</button></div>' +
+    '<p class="muted small" id="publishState"></p></div>' +
+  '<div class="card"><h2>Services &amp; prices</h2><p class="muted small">These show on the customer page. Edit a name, price or note, or remove a service.</p>' +
+    '<div id="servicesEditor"></div>' +
+    '<div class="row"><button class="btn" onclick="App.addServiceRow()">+ Add service</button> ' +
+    '<button class="btn primary" onclick="App.saveServices()">Save services</button></div></div>' +
   '<div class="card"><h2>Roles</h2><p><strong>Owner</strong> — everything, including reports, settings and part costs.<br>' +
     '<strong>Sales Assistant</strong> — sales, customers and phones for sale.<br>' +
     '<strong>Technician</strong> — repair tickets and parts usage (no prices editing, no costs shown).<br>' +
@@ -1053,6 +1334,102 @@ function saveSettings(ev) {
   DB.settings.staff = f.staff.value.split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
   if (!DB.settings.staff.length) DB.settings.staff = ['Sheldon'];
   saveDB(); renderNav(); renderView(); toast('Settings saved');
+}
+function updatePublishKeyState() {
+  var el = $('#publishKeyState');
+  if (!el) return;
+  el.textContent = (DB.settings.publishKey ? 'Publish key saved (hidden). Enter a new one above to change it.' : 'No publish key saved yet.');
+}
+function savePublishKey() {
+  var input = $('#publishKeyInput');
+  if (!input) return;
+  var v = input.value.trim();
+  if (!v) { toast('Enter a publish key first'); return; }
+  DB.settings.publishKey = v;
+  saveDB();
+  input.value = '';
+  updatePublishKeyState();
+  toast('Publish key saved');
+}
+// Public-safe payload for the customer page: available phones (no IMEI, no
+// cost), services, and tickets as number/status/device only (no customer
+// name, phone, prices or notes).
+function buildPublicPayload() {
+  return {
+    phones: availablePhones().map(function (ph) {
+      return { brand: ph.brand, model: ph.model, storage: ph.storage, condition: ph.condition, price: ph.price, photo: ph.photo || '' };
+    }),
+    services: (DB.settings.services || []).map(function (s) {
+      return { name: s.name, price: s.price, note: s.note || '' };
+    }),
+    tickets: DB.tickets.map(function (t) {
+      return { number: t.id, status: t.status, device: t.brand + ' ' + t.model };
+    }),
+    updatedAt: new Date().toISOString()
+  };
+}
+function publishToCustomerPage() {
+  var state = $('#publishState');
+  var key = DB.settings.publishKey || '';
+  if (!key) {
+    if (state) state.textContent = 'Add your publish key first — it is set in the Cloudflare dashboard (PUBLISH_KEY) and saved here.';
+    toast('Add your publish key first');
+    return;
+  }
+  if (state) state.textContent = 'Publishing…';
+  var body = buildPublicPayload();
+  body.key = key;
+  fetch('/api/publish', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  }).then(function (r) {
+    return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, body: j }; });
+  }).then(function (res) {
+    if (res.ok && res.body.ok) {
+      if (state) state.textContent = 'Published just now — the customer page is up to date.';
+      toast('Customer page published');
+    } else {
+      if (state) state.textContent = 'Publish failed — ' + (res.body.error || 'check the publish key and the Cloudflare setup.');
+      toast('Publish failed');
+    }
+  }).catch(function () {
+    if (state) state.textContent = 'Publish failed — could not reach the server. The customer page runs on Cloudflare Pages; open the POS there and try again.';
+    toast('Publish failed — no connection');
+  });
+}
+function renderServicesEditor() {
+  var box = $('#servicesEditor');
+  if (!box) return;
+  var services = DB.settings.services || [];
+  box.innerHTML = services.map(function (s, i) {
+    return '<div class="svc-row" data-idx="' + i + '">' +
+      '<input class="input svc-name" value="' + esc(s.name) + '" placeholder="Service name" aria-label="Service name">' +
+      '<input class="input svc-price" type="number" min="0" step="1" value="' + esc(s.price) + '" placeholder="Price" aria-label="Price (JMD)">' +
+      '<input class="input svc-note" value="' + esc(s.note || '') + '" placeholder="Note (optional)" aria-label="Note">' +
+      '<button class="btn small danger" onclick="App.removeServiceRow(' + i + ')">Remove</button></div>';
+  }).join('') || '<p class="muted">No services yet — add one below.</p>';
+}
+function addServiceRow() {
+  if (!DB.settings.services) DB.settings.services = [];
+  DB.settings.services.push({ name: '', price: 0, note: '' });
+  saveDB(); renderServicesEditor();
+}
+function removeServiceRow(i) {
+  DB.settings.services.splice(i, 1);
+  saveDB(); renderServicesEditor();
+}
+function saveServices() {
+  var rows = $$('#servicesEditor .svc-row');
+  var services = rows.map(function (row) {
+    var name = row.querySelector('.svc-name').value.trim();
+    var price = Math.max(0, Math.round(num(row.querySelector('.svc-price').value)));
+    var note = row.querySelector('.svc-note').value.trim();
+    return { name: name, price: price, note: note };
+  }).filter(function (s) { return s.name; });
+  DB.settings.services = services;
+  saveDB(); renderServicesEditor();
+  toast('Services saved');
 }
 function clearSampleData() {
   openConfirm('Remove all sample customers, tickets, sales and phones? Your real records stay untouched.', function () {
@@ -1094,6 +1471,7 @@ function importData(ev) {
       DB = data;
       if (!DB.settings) DB.settings = { shopName: 'Fixtings POS', shopContact: '', staff: ['Sheldon'] };
       if (!DB.role) DB.role = 'owner';
+      ensureSettingsDefaults();
       saveDB(); renderNav(); show('dashboard');
       toast('Backup imported');
     } catch (e) { toast('That file is not a valid Fixtings POS backup'); }
@@ -1116,14 +1494,19 @@ var App = {
   show: show, closeModal: closeModal, confirmYes: confirmYes,
   addToCart: addToCart, cartQty: cartQty, cartRemove: cartRemove, clearCart: clearCart, completeSale: completeSale,
   customerForm: customerForm, saveCustomer: saveCustomer, deleteCustomer: deleteCustomer, customerDetail: customerDetail,
+  setCustomerPage: setCustomerPage,
   ticketForm: ticketForm, saveTicket: saveTicket, ticketDetail: ticketDetail, setTicketStatus: setTicketStatus,
   ticketBrandChanged: ticketBrandChanged, ticketModelChanged: ticketModelChanged, ticketIssueChanged: ticketIssueChanged,
   saveTicketTech: saveTicketTech, attachPart: attachPart, collectTicket: collectTicket, finishCollect: finishCollect,
-  deleteTicket: deleteTicket, setTicketFilter: setTicketFilter,
+  deleteTicket: deleteTicket, setTicketFilter: setTicketFilter, setTicketPage: setTicketPage,
   setPartsFilter: setPartsFilter, adjustStock: adjustStock, partForm: partForm, savePart: savePart, deletePart: deletePart,
+  setPartsPage: setPartsPage, setPartsTab: setPartsTab, setOrderPage: setOrderPage, copyOrderList: copyOrderList,
   setSpecDevice: setSpecDevice, setSpecTab: setSpecTab, setSpecType: setSpecType, attachPartById: attachPartById,
   phoneForm: phoneForm, savePhone: savePhone, setPhoneStatus: setPhoneStatus, deletePhone: deletePhone,
+  setPhonePage: setPhonePage, phonePhotoPicked: phonePhotoPicked,
   setReportDays: setReportDays, saveSettings: saveSettings, clearSampleData: clearSampleData, resetAll: resetAll,
+  savePublishKey: savePublishKey, publishToCustomerPage: publishToCustomerPage,
+  saveServices: saveServices, addServiceRow: addServiceRow, removeServiceRow: removeServiceRow,
   exportData: exportData, importData: importData, setRole: setRole
 };
 
@@ -1158,6 +1541,36 @@ if (typeof window !== 'undefined') {
     deviceSpecs: (typeof DEVICE_SPECS !== 'undefined') ? DEVICE_SPECS : null,
     sharedParts: (typeof SHARED_PARTS !== 'undefined') ? SHARED_PARTS : null,
     devices: (typeof DEVICES !== 'undefined') ? DEVICES : null,
-    fmt: fmt
+    fmt: fmt,
+    normalizeWaPhone: normalizeWaPhone,
+    waReadyLink: waReadyLink,
+    warrantyActive: warrantyActive,
+    addDaysStr: addDaysStr,
+    buildPublicPayload: buildPublicPayload,
+    buildDefaultServices: buildDefaultServices,
+    orderListText: orderListText,
+    orderListItems: orderListItems,
+    pageCount: pageCount,
+    pageSlice: pageSlice,
+    PAGE_SIZE: PAGE_SIZE,
+    renderView: renderView,
+    filteredTickets: filteredTickets,
+    filteredCustomers: filteredCustomers,
+    filteredPhones: filteredPhones,
+    filteredParts: filteredParts,
+    setPendingPhonePhoto: function (v) { pendingPhonePhoto = v; },
+    getPendingPhonePhoto: function () { return pendingPhonePhoto; },
+    getState: function () { return { partsPage: partsPage, ticketPage: ticketPage, customerPage: customerPage, phonePage: phonePage, orderPage: orderPage, ticketQuery: ticketQuery, customerQuery: customerQuery, phoneQuery: phoneQuery, partsTab: partsTab }; },
+    setState: function (s) {
+      if (s.partsPage != null) partsPage = s.partsPage;
+      if (s.ticketPage != null) ticketPage = s.ticketPage;
+      if (s.customerPage != null) customerPage = s.customerPage;
+      if (s.phonePage != null) phonePage = s.phonePage;
+      if (s.orderPage != null) orderPage = s.orderPage;
+      if (s.ticketQuery != null) ticketQuery = s.ticketQuery;
+      if (s.customerQuery != null) customerQuery = s.customerQuery;
+      if (s.phoneQuery != null) phoneQuery = s.phoneQuery;
+      if (s.partsTab != null) partsTab = s.partsTab;
+    }
   };
 }

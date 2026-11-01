@@ -9,7 +9,7 @@ export async function onRequest(context) {
 
     const kv = context.env.FIXTINGS_PUBLIC;
     if (!kv) {
-      return new Response(JSON.stringify({ ok: false, error: "KV not configured", keys: Object.keys(context.env || {}).sort(), kvType: typeof kv }), {
+      return new Response(JSON.stringify({ ok: false, error: "KV not configured", keys: Object.keys(context.env || {}).sort(), kvType: typeof kv, commit: (context.env && context.env.CF_PAGES_COMMIT_SHA) || null }), {
         status: 500,
         headers: { "content-type": "application/json" },
       });

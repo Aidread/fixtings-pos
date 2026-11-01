@@ -13,6 +13,7 @@ export async function onRequest(context) {
   try {
     const v = kv ? await kv.get("public") : null;
     out.kvGetPublic = v === null ? null : typeof v;
+  out.commit = env.CF_PAGES_COMMIT_SHA || null;
   } catch (e) {
     out.kvGetError = e && e.message ? e.message : String(e);
   }

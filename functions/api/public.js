@@ -9,7 +9,7 @@ export async function onRequest(context) {
 
     const empty = { phones: [], services: [], tickets: [], updatedAt: null };
 
-    const kv = context.env.FIXTINGS_PUBLIC;
+    const kv = context.env.FIXINGS_PUBLIC;
     if (!kv) {
       return new Response(JSON.stringify(empty), {
         status: 200,

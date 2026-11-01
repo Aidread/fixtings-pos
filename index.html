@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixtings POS — Phone Repair &amp; Sales</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="app">
+  <aside id="sidebar">
+    <div class="brand">
+      <div class="brand-mark">F</div>
+      <div>
+        <div class="brand-name" id="shopName">Fixtings POS</div>
+        <div class="brand-sub" id="shopContact">Fixtings Ja, Falmouth, Trelawny</div>
+      </div>
+    </div>
+    <nav id="nav"></nav>
+    <div class="side-foot">
+      <label class="lbl" for="roleSelect">Signed in as</label>
+      <select id="roleSelect" class="input dark" onchange="App.setRole(this.value)">
+        <option value="owner">Owner</option>
+        <option value="sales">Sales Assistant</option>
+        <option value="tech">Technician</option>
+      </select>
+      <p class="side-note">Data is stored on this device only.</p>
+    </div>
+  </aside>
+  <div id="main">
+    <main id="view"></main>
+    <footer class="foot">Fixtings POS &middot; Prices in Jamaican dollars (JMD)</footer>
+  </div>
+</div>
+<div id="modal-root"></div>
+<div id="receipt-root"></div>
+<script src="parts.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

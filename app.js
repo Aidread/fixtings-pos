@@ -243,15 +243,15 @@ function viewDashboard() {
     '<div class="card stat"><div class="stat-label">Phones for sale</div><div class="stat-value">' + availablePhones().length + '</div><div class="stat-note">' + DB.phones.length + ' listed in total</div></div>' +
   '</div>' +
   '<div class="grid-2">' +
-    '<div class="card"><h2>Recent sales</h2>' + (recent.length ? '<table class="tbl"><thead><tr><th>Date</th><th>Customer</th><th>Payment</th><th class="r">Total</th></tr></thead><tbody>' +
-      recent.map(function (s) { return '<tr><td>' + dstr(s.date) + '</td><td>' + esc(s.customerName || 'Walk-in') + '</td><td>' + esc(s.payment) + '</td><td class="r">' + fmt(s.total) + '</td></tr>'; }).join('') + '</tbody></table>' : '<p class="muted">No sales yet.</p>') +
+    '<div class="card"><h2>Recent sales</h2>' + (recent.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Date</th><th>Customer</th><th>Payment</th><th class="r">Total</th></tr></thead><tbody>' +
+      recent.map(function (s) { return '<tr><td>' + dstr(s.date) + '</td><td>' + esc(s.customerName || 'Walk-in') + '</td><td>' + esc(s.payment) + '</td><td class="r">' + fmt(s.total) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<p class="muted">No sales yet.</p>') +
       '<button class="btn" onclick="App.show(\'pos\')">New sale</button></div>' +
-    '<div class="card"><h2>Low stock</h2>' + (low.length ? '<table class="tbl"><thead><tr><th>Part</th><th class="r">Stock</th><th class="r">Price</th></tr></thead><tbody>' +
-      low.map(function (p) { return '<tr><td>' + esc(p.brand + ' ' + p.model + ' — ' + p.label) + '</td><td class="r bad">' + p.stock + '</td><td class="r">' + fmt(p.price) + '</td></tr>'; }).join('') + '</tbody></table>' : '<p class="muted">Nothing low on stock.</p>') +
+    '<div class="card"><h2>Low stock</h2>' + (low.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Part</th><th class="r">Stock</th><th class="r">Price</th></tr></thead><tbody>' +
+      low.map(function (p) { return '<tr><td>' + esc(p.brand + ' ' + p.model + ' — ' + p.label) + '</td><td class="r bad">' + p.stock + '</td><td class="r">' + fmt(p.price) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<p class="muted">Nothing low on stock.</p>') +
       '<button class="btn" onclick="App.show(\'parts\')">Manage inventory</button></div>' +
   '</div>' +
-  '<div class="card"><h2>Open repair tickets</h2>' + (open.length ? '<table class="tbl"><thead><tr><th>Customer</th><th>Device</th><th>Issue</th><th>Technician</th><th>Status</th><th class="r">Balance due</th></tr></thead><tbody>' +
-    open.map(function (t) { return '<tr><td>' + esc(t.customerName) + '</td><td>' + esc(t.brand + ' ' + t.model) + '</td><td>' + esc(t.issue) + '</td><td>' + esc(t.technician || '—') + '</td><td><span class="badge st-' + t.status.replace(/ /g, '') + '">' + esc(t.status) + '</span></td><td class="r">' + fmt(Math.max(0, (t.quoted || 0) - (t.deposit || 0))) + '</td></tr>'; }).join('') + '</tbody></table>' : '<p class="muted">No open tickets.</p>') +
+  '<div class="card"><h2>Open repair tickets</h2>' + (open.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Customer</th><th>Device</th><th>Issue</th><th>Technician</th><th>Status</th><th class="r">Balance due</th></tr></thead><tbody>' +
+    open.map(function (t) { return '<tr><td>' + esc(t.customerName) + '</td><td>' + esc(t.brand + ' ' + t.model) + '</td><td>' + esc(t.issue) + '</td><td>' + esc(t.technician || '—') + '</td><td><span class="badge st-' + t.status.replace(/ /g, '') + '">' + esc(t.status) + '</span></td><td class="r">' + fmt(Math.max(0, (t.quoted || 0) - (t.deposit || 0))) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<p class="muted">No open tickets.</p>') +
     '<button class="btn" onclick="App.show(\'repairs\')">Open repairs</button></div>';
 }
 
@@ -320,12 +320,12 @@ function renderCart() {
   var box = $('#cartBox');
   if (!box) return;
   if (!cart.length) { box.innerHTML = '<p class="muted">Cart is empty.</p>'; return; }
-  box.innerHTML = '<table class="tbl"><thead><tr><th>Item</th><th class="r">Price</th><th class="r">Qty</th><th class="r">Amount</th><th></th></tr></thead><tbody>' +
+  box.innerHTML = '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Item</th><th class="r">Price</th><th class="r">Qty</th><th class="r">Amount</th><th></th></tr></thead><tbody>' +
     cart.map(function (it, i) {
       return '<tr><td>' + esc(it.label) + '</td><td class="r">' + fmt(it.price) + '</td>' +
         '<td class="r"><button class="btn tiny" onclick="App.cartQty(' + i + ',-1)">−</button> ' + it.qty + ' <button class="btn tiny" onclick="App.cartQty(' + i + ',1)">+</button></td>' +
         '<td class="r">' + fmt(it.price * it.qty) + '</td><td><button class="btn tiny danger" onclick="App.cartRemove(' + i + ')">×</button></td></tr>';
-    }).join('') + '</tbody></table>';
+    }).join('') + '</tbody></table></div>';
 }
 
 function addToCart(kind, refId) {
@@ -398,7 +398,7 @@ function showReceipt(sale) {
   var html = '<div class="receipt">' +
     '<h2>' + esc(DB.settings.shopName) + '</h2><p>' + esc(DB.settings.shopContact) + '</p>' +
     '<p>Receipt #' + esc(sale.id) + '<br>' + dtime(sale.createdAt) + '<br>Customer: ' + esc(sale.customerName) + '<br>Payment: ' + esc(sale.payment) + '</p>' +
-    '<table class="tbl"><thead><tr><th>Item</th><th class="r">Qty</th><th class="r">Price</th><th class="r">Amount</th></tr></thead><tbody>' + lines + '</tbody></table>' +
+    '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Item</th><th class="r">Qty</th><th class="r">Price</th><th class="r">Amount</th></tr></thead><tbody>' + lines + '</tbody></table></div>' +
     '<p class="receipt-total">Total: ' + fmt(sale.total) + '</p><p>Thank you for shopping with ' + esc(DB.settings.shopName) + '!</p></div>';
   $('#receipt-root').innerHTML = html;
   openModal(html + '<div class="row-end"><button class="btn" onclick="App.closeModal()">Close</button><button class="btn primary" onclick="window.print()">Print receipt</button></div>');
@@ -409,13 +409,13 @@ function viewCustomers() {
   return '' +
   '<h1>Customers</h1><p class="sub">' + DB.customers.length + ' customers on file.</p>' +
   '<div class="row-end"><button class="btn primary" onclick="App.customerForm()">+ Add customer</button></div>' +
-  '<div class="card"><table class="tbl"><thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Notes</th><th></th></tr></thead><tbody>' +
+  '<div class="card"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Notes</th><th></th></tr></thead><tbody>' +
   DB.customers.map(function (c) {
     return '<tr><td><a href="javascript:void(0)" onclick="App.customerDetail(\'' + c.id + '\')"><strong>' + esc(c.name) + '</strong></a>' + (c.isSample ? ' <span class="tag">sample</span>' : '') + '</td>' +
       '<td>' + esc(c.phone) + '</td><td>' + esc(c.email || '—') + '</td><td>' + esc(c.notes || '') + '</td>' +
       '<td class="r"><button class="btn small" onclick="App.customerForm(\'' + c.id + '\')">Edit</button> ' +
       '<button class="btn small danger" onclick="App.deleteCustomer(\'' + c.id + '\')">Delete</button></td></tr>';
-  }).join('') + '</tbody></table></div>';
+  }).join('') + '</tbody></table></div></div>';
 }
 
 function customerForm(id) {
@@ -459,10 +459,10 @@ function customerDetail(id) {
     '<p>' + esc(c.phone) + (c.email ? ' &middot; ' + esc(c.email) : '') + '</p>' +
     (c.notes ? '<p class="muted">' + esc(c.notes) + '</p>' : '') +
     '<p><strong>' + sales.length + ' sale(s)</strong> &middot; ' + fmt(spent) + ' spent &middot; <strong>' + tickets.length + ' repair ticket(s)</strong></p>' +
-    '<h4>Sales history</h4>' + (sales.length ? '<table class="tbl"><thead><tr><th>Date</th><th>Items</th><th class="r">Total</th></tr></thead><tbody>' +
-      sales.map(function (s) { return '<tr><td>' + dstr(s.date) + '</td><td>' + esc(s.items.map(function (i) { return i.label; }).join('; ')) + '</td><td class="r">' + fmt(s.total) + '</td></tr>'; }).join('') + '</tbody></table>' : '<p class="muted">No sales yet.</p>') +
-    '<h4>Repair history</h4>' + (tickets.length ? '<table class="tbl"><thead><tr><th>Date</th><th>Device</th><th>Status</th><th class="r">Quoted</th></tr></thead><tbody>' +
-      tickets.map(function (t) { return '<tr><td>' + dstr(t.createdAt) + '</td><td>' + esc(t.brand + ' ' + t.model) + '</td><td>' + esc(t.status) + '</td><td class="r">' + fmt(t.quoted) + '</td></tr>'; }).join('') + '</tbody></table>' : '<p class="muted">No repairs yet.</p>') +
+    '<h4>Sales history</h4>' + (sales.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Date</th><th>Items</th><th class="r">Total</th></tr></thead><tbody>' +
+      sales.map(function (s) { return '<tr><td>' + dstr(s.date) + '</td><td>' + esc(s.items.map(function (i) { return i.label; }).join('; ')) + '</td><td class="r">' + fmt(s.total) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<p class="muted">No sales yet.</p>') +
+    '<h4>Repair history</h4>' + (tickets.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Date</th><th>Device</th><th>Status</th><th class="r">Quoted</th></tr></thead><tbody>' +
+      tickets.map(function (t) { return '<tr><td>' + dstr(t.createdAt) + '</td><td>' + esc(t.brand + ' ' + t.model) + '</td><td>' + esc(t.status) + '</td><td class="r">' + fmt(t.quoted) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<p class="muted">No repairs yet.</p>') +
     '<div class="row-end"><button class="btn" onclick="App.closeModal()">Close</button></div>');
 }
 
@@ -478,13 +478,13 @@ function viewRepairs() {
   '<div class="toolbar"><select class="input inline" onchange="App.setTicketFilter(this.value)"><option value="">All statuses</option>' +
     TICKET_STATUSES.map(function (s) { return '<option value="' + s + '"' + (ticketFilter === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select> ' +
     '<button class="btn primary" onclick="App.ticketForm()">+ New repair ticket</button></div>' +
-  '<div class="card"><table class="tbl"><thead><tr><th>Customer</th><th>Device</th><th>Issue</th><th>Technician</th><th>Status</th><th class="r">Quoted</th><th class="r">Balance</th><th></th></tr></thead><tbody>' +
+  '<div class="card"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Customer</th><th>Device</th><th>Issue</th><th>Technician</th><th>Status</th><th class="r">Quoted</th><th class="r">Balance</th><th></th></tr></thead><tbody>' +
   (list.length ? list.map(function (t) {
     var bal = Math.max(0, (t.quoted || 0) - (t.deposit || 0));
     return '<tr><td>' + esc(t.customerName) + '</td><td>' + esc(t.brand + ' ' + t.model) + '</td><td>' + esc(t.issue) + '</td><td>' + esc(t.technician || '—') + '</td>' +
       '<td><span class="badge ' + (STATUS_CLASS[t.status] || '') + '">' + esc(t.status) + '</span></td><td class="r">' + fmt(t.quoted) + '</td><td class="r">' + fmt(bal) + '</td>' +
       '<td class="r"><button class="btn small" onclick="App.ticketDetail(\'' + t.id + '\')">Open</button></td></tr>';
-  }).join('') : '<tr><td colspan="8" class="muted">No tickets match.</td></tr>') + '</tbody></table></div>';
+  }).join('') : '<tr><td colspan="8" class="muted">No tickets match.</td></tr>') + '</tbody></table></div></div>';
 }
 function setTicketFilter(v) { ticketFilter = v; renderView(); }
 
@@ -493,23 +493,60 @@ function ticketForm() {
     '<form onsubmit="App.saveTicket(event)">' +
     '<label class="lbl">Customer *</label><select name="customerId" class="input" required><option value="">Select customer…</option>' +
     DB.customers.map(function (c) { return '<option value="' + c.id + '">' + esc(c.name) + ' — ' + esc(c.phone) + '</option>'; }).join('') + '</select>' +
-    '<div class="grid-2col"><div><label class="lbl">Brand *</label><select name="brand" class="input" required><option value="">Select…</option><option>Apple</option><option>Samsung</option><option>Google</option><option>Xiaomi</option><option>Poco</option><option>Huawei</option><option>Motorola</option><option>Infinix</option><option>Tecno</option><option>Other</option></select></div>' +
-    '<div><label class="lbl">Model *</label><input name="model" class="input" required placeholder="e.g. iPhone 13"></div></div>' +
-    '<label class="lbl">Issue / problem *</label><textarea name="issue" class="input" rows="2" required placeholder="e.g. Cracked screen"></textarea>' +
+    '<div class="grid-2col"><div><label class="lbl">Brand *</label><select name="brand" class="input" required onchange="App.ticketBrandChanged(this.value)"><option value="">Select…</option><option>Apple</option><option>Samsung</option><option>Google</option><option>Xiaomi</option><option>Poco</option><option>Huawei</option><option>Motorola</option><option>Infinix</option><option>Tecno</option><option>Other</option></select></div>' +
+    '<div><label class="lbl">Model *</label><select name="model" id="ticketModel" class="input" required onchange="App.ticketModelChanged(this.value)"><option value="">Pick a brand first…</option></select>' +
+    '<input name="modelManual" id="ticketModelManual" class="input" placeholder="Type the model…" style="display:none;margin-top:8px"></div></div>' +
+    '<label class="lbl">Issue / problem *</label><select name="issue" id="ticketIssue" class="input" required onchange="App.ticketIssueChanged(this.value)"><option value="">Select issue…</option>' +
+    COMMON_ISSUES.map(function (i) { return '<option>' + esc(i) + '</option>'; }).join('') +
+    '<option value="__other">Other — type it manually</option></select>' +
+    '<textarea name="issueManual" id="ticketIssueManual" class="input" rows="2" placeholder="Describe the problem…" style="display:none;margin-top:8px"></textarea>' +
     '<div class="grid-2col"><div><label class="lbl">Quoted price (JMD) *</label><input name="quoted" type="number" min="0" step="1" class="input" required></div>' +
     '<div><label class="lbl">Deposit paid (JMD)</label><input name="deposit" type="number" min="0" step="1" class="input" value="0"></div></div>' +
     '<label class="lbl">Assign technician</label><select name="technician" class="input">' + DB.settings.staff.map(function (s) { return '<option>' + esc(s) + '</option>'; }).join('') + '</select>' +
     '<div class="row-end"><button type="button" class="btn" onclick="App.closeModal()">Cancel</button><button class="btn primary" type="submit">Create ticket</button></div></form>');
 }
+// Common repair issues offered on the ticket form; "Other" reveals a manual field.
+var COMMON_ISSUES = ['Cracked screen', 'Touch not responding', 'Battery drains fast', "Phone won't turn on", 'Charging port loose / not charging', 'Phone overheats', 'No sound / speaker not working', 'Microphone not working', 'Camera not working', 'Water damage', 'Stuck on logo / software issue', 'Back glass cracked', "Earpiece not working (can't hear calls)", 'Buttons not working (power/volume)'];
+function ticketBrandChanged(brand) {
+  var sel = document.getElementById('ticketModel');
+  if (!sel) return;
+  var models = (typeof DEVICES !== 'undefined') ? DEVICES.filter(function (d) { return d.brand === brand; }).map(function (d) { return d.model; }) : [];
+  var html = '<option value="">Select model…</option>';
+  if (brand === 'Other' || !models.length) {
+    html += '<option value="__other" selected>Other — type it manually</option>';
+  } else {
+    html += models.map(function (m) { return '<option>' + esc(m) + '</option>'; }).join('');
+    html += '<option value="__other">Other — type it manually</option>';
+  }
+  sel.innerHTML = html;
+  ticketModelChanged(sel.value);
+}
+function ticketModelChanged(v) {
+  var manual = document.getElementById('ticketModelManual');
+  if (!manual) return;
+  manual.style.display = (v === '__other') ? '' : 'none';
+  manual.required = (v === '__other');
+}
+function ticketIssueChanged(v) {
+  var manual = document.getElementById('ticketIssueManual');
+  if (!manual) return;
+  manual.style.display = (v === '__other') ? '' : 'none';
+  manual.required = (v === '__other');
+}
+// Form field value by name (works in browsers and in jsdom, where the
+// form's named-property shortcut is not available).
+function field(f, name) { var el = f.elements ? f.elements.namedItem(name) : null; return el ? el.value : ''; }
 function saveTicket(ev) {
   ev.preventDefault();
   var f = ev.target;
-  var cust = DB.customers.find(function (c) { return c.id === f.customerId.value; });
+  var cust = DB.customers.find(function (c) { return c.id === field(f, 'customerId'); });
+  var model = (field(f, 'model') === '__other') ? field(f, 'modelManual').trim() : field(f, 'model');
+  var issue = (field(f, 'issue') === '__other') ? field(f, 'issueManual').trim() : field(f, 'issue');
   var t = {
-    id: uid('T-'), customerId: f.customerId.value, customerName: cust ? cust.name : '',
-    brand: f.brand.value, model: f.model.value.trim(), issue: f.issue.value.trim(),
-    quoted: num(f.quoted.value), deposit: num(f.deposit.value), status: 'Received',
-    technician: f.technician.value, partsUsed: [], createdAt: todayStr(), updatedAt: todayStr(), isSample: false
+    id: uid('T-'), customerId: field(f, 'customerId'), customerName: cust ? cust.name : '',
+    brand: field(f, 'brand'), model: model, issue: issue,
+    quoted: num(field(f, 'quoted')), deposit: num(field(f, 'deposit')), status: 'Received',
+    technician: field(f, 'technician'), partsUsed: [], createdAt: todayStr(), updatedAt: todayStr(), isSample: false
   };
   DB.tickets.push(t);
   saveDB(); closeModal(); renderView(); toast('Ticket created — ' + t.brand + ' ' + t.model);
@@ -534,8 +571,8 @@ function ticketDetail(id) {
     '<div><label class="lbl">Quoted / Deposit / Balance</label><p><strong>' + fmt(t.quoted) + '</strong> / ' + fmt(t.deposit) + ' / <strong>' + fmt(bal) + '</strong></p></div></div>' +
     '<button class="btn small" onclick="App.saveTicketTech(\'' + t.id + '\')">Save technician</button>' +
     '<h4>Parts used (' + fmt(partsTotal) + ')</h4>' +
-    (t.partsUsed.length ? '<table class="tbl"><thead><tr><th>Part</th><th class="r">Qty</th><th class="r">Price</th></tr></thead><tbody>' +
-      t.partsUsed.map(function (p) { return '<tr><td>' + esc(p.label) + '</td><td class="r">' + p.qty + '</td><td class="r">' + fmt(p.price * p.qty) + '</td></tr>'; }).join('') + '</tbody></table>' : '<p class="muted">No parts attached yet.</p>') +
+    (t.partsUsed.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Part</th><th class="r">Qty</th><th class="r">Price</th></tr></thead><tbody>' +
+      t.partsUsed.map(function (p) { return '<tr><td>' + esc(p.label) + '</td><td class="r">' + p.qty + '</td><td class="r">' + fmt(p.price * p.qty) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<p class="muted">No parts attached yet.</p>') +
     (t.status !== 'Collected' ? (function () {
       var fitting = (typeof partFitsDevice === 'function') ? DB.parts.filter(function (p) { return p.stock > 0 && partFitsDevice(p, t.brand, t.model); }) : [];
       var own = fitting.filter(function (p) { return p.brand === t.brand && p.model === t.model; });
@@ -548,7 +585,7 @@ function ticketDetail(id) {
       if (own.length) rows += own.map(fitRow).join('');
       if (shared.length) rows += '<tr><td colspan="4" class="muted small"><strong>Shared parts from other models that fit this device:</strong></td></tr>' + shared.map(fitRow).join('');
       return '<h4>Parts that fit this ' + esc(t.brand + ' ' + t.model) + ' (' + fitting.length + ' in stock)</h4>' +
-        (fitting.length ? '<table class="tbl"><thead><tr><th>Part</th><th>Fit</th><th class="r">Price</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>' : '<p class="muted">Nothing in stock fits this device.</p>');
+        (fitting.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Part</th><th>Fit</th><th class="r">Price</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>' : '<p class="muted">Nothing in stock fits this device.</p>');
     })() : '') +
     (t.status !== 'Collected' ? '<div class="row"><select id="attachPartSel" class="input"><option value="">Attach any other part…</option>' +
       DB.parts.filter(function (p) { return p.stock > 0; }).map(function (p) { return '<option value="' + p.id + '">' + esc(p.brand + ' ' + p.model + ' — ' + p.label + ' (' + p.stock + ' left) — ' + fmt(p.price)) + '</option>'; }).join('') +
@@ -673,7 +710,7 @@ function renderPartsTable() {
   var list = filteredParts().slice(0, 200);
   var costs = canSeeCosts();
   box.innerHTML = '<p class="muted small">Showing ' + list.length + ' of ' + DB.parts.length + ' parts' + (filteredParts().length > 200 ? ' (first 200 — narrow the filters)' : '') + '.</p>' +
-  '<table class="tbl"><thead><tr><th>SKU</th><th>Part</th><th>Device</th><th>Also fits</th><th class="r">Stock</th>' + (costs ? '<th class="r">Cost</th>' : '') + '<th class="r">Price</th><th class="r">Threshold</th><th></th></tr></thead><tbody>' +
+  '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>SKU</th><th>Part</th><th>Device</th><th>Also fits</th><th class="r">Stock</th>' + (costs ? '<th class="r">Cost</th>' : '') + '<th class="r">Price</th><th class="r">Threshold</th><th></th></tr></thead><tbody>' +
   (list.length ? list.map(function (p) {
     var low = p.stock <= p.threshold;
     var fits = (typeof fitsForPart === 'function') ? fitsForPart(p) : { confirmed: [], specMatched: [] };
@@ -687,7 +724,7 @@ function renderPartsTable() {
       (costs ? '<td class="r">' + fmt(p.cost) + '</td>' : '') +
       '<td class="r">' + fmt(p.price) + '</td><td class="r">' + p.threshold + '</td>' +
       '<td class="r">' + (role() === 'owner' ? '<button class="btn small" onclick="App.partForm(\'' + p.id + '\')">Edit</button> <button class="btn small danger" onclick="App.deletePart(\'' + p.id + '\')">Delete</button>' : '<span class="muted small">view only</span>') + '</td></tr>';
-  }).join('') : '<tr><td colspan="9" class="muted">No parts match these filters.</td></tr>') + '</tbody></table>';
+  }).join('') : '<tr><td colspan="9" class="muted">No parts match these filters.</td></tr>') + '</tbody></table></div>';
 }
 function setPartsFilter(k, v) {
   partsFilter[k] = v;
@@ -823,11 +860,11 @@ function viewSpecDevice() {
     return p.stock > 0 && (typeof partFitsDevice === 'function') && partFitsDevice(p, dev.brand, dev.model);
   });
   html += '<div class="card"><h2>Parts in stock that fit the ' + esc(dev.brand + ' ' + dev.model) + ' (' + fitting.length + ')</h2>' +
-    (fitting.length ? '<table class="tbl"><thead><tr><th>Part</th><th>Listed for</th><th>Fit</th><th class="r">Stock</th><th class="r">Price</th></tr></thead><tbody>' +
+    (fitting.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Part</th><th>Listed for</th><th>Fit</th><th class="r">Stock</th><th class="r">Price</th></tr></thead><tbody>' +
       fitting.map(function (p) {
         var kind = partFitsDevice(p, dev.brand, dev.model);
         return '<tr><td>' + esc(p.label) + '</td><td>' + esc(p.brand + ' ' + p.model) + '</td><td>' + fitBadge(kind) + '</td><td class="r">' + p.stock + '</td><td class="r">' + fmt(p.price) + '</td></tr>';
-      }).join('') + '</tbody></table>' : '<p class="muted">Nothing in stock fits this device.</p>') + '</div>';
+      }).join('') + '</tbody></table></div>' : '<p class="muted">Nothing in stock fits this device.</p>') + '</div>';
 
   // Compatibility lookup: pick a part type, see which devices share it.
   var groups = specType && (typeof sharedGroupsFor === 'function') ? sharedGroupsFor(specType) : [];
@@ -855,10 +892,10 @@ function viewSharedParts() {
   return '' +
   '<div class="card"><h2>Confirmed shared parts (' + confirmed.length + ')</h2>' +
     '<p class="muted small">These parts are established in the repair trade as interchangeable between the listed models — same part, same fit.</p>' +
-    (confirmed.length ? '<table class="tbl"><thead><tr><th>Part</th><th>Fits</th><th>Why</th></tr></thead><tbody>' + groupRows(confirmed) + '</tbody></table>' : '<p class="muted">None recorded yet.</p>') + '</div>' +
+    (confirmed.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Part</th><th>Fits</th><th>Why</th></tr></thead><tbody>' + groupRows(confirmed) + '</tbody></table></div>' : '<p class="muted">None recorded yet.</p>') + '</div>' +
   '<div class="card spec-warn"><h2>Spec-matched only — verify fit before ordering (' + specMatched.length + ')</h2>' +
     '<p class="muted small">These models share the same size and type on paper (same screen size, same battery capacity), but the fit is NOT confirmed. Check connectors, brackets and shape before ordering or fitting.</p>' +
-    (specMatched.length ? '<table class="tbl"><thead><tr><th>Part</th><th>Looks the same on</th><th>Why it is only a candidate</th></tr></thead><tbody>' + groupRows(specMatched) + '</tbody></table>' : '<p class="muted">None recorded yet.</p>') + '</div>';
+    (specMatched.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Part</th><th>Looks the same on</th><th>Why it is only a candidate</th></tr></thead><tbody>' + groupRows(specMatched) + '</tbody></table></div>' : '<p class="muted">None recorded yet.</p>') + '</div>';
 }
 
 // ---------------- phones for sale ----------------
@@ -866,7 +903,7 @@ function viewPhones() {
   return '' +
   '<h1>Phones for Sale</h1><p class="sub">' + availablePhones().length + ' available &middot; ' + DB.phones.length + ' listed.</p>' +
   '<div class="row-end"><button class="btn primary" onclick="App.phoneForm()">+ Add phone</button></div>' +
-  '<div class="card"><table class="tbl"><thead><tr><th>Phone</th><th>Storage</th><th>Condition</th><th>IMEI / Serial</th><th class="r">Price</th><th>Status</th><th></th></tr></thead><tbody>' +
+  '<div class="card"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Phone</th><th>Storage</th><th>Condition</th><th>IMEI / Serial</th><th class="r">Price</th><th>Status</th><th></th></tr></thead><tbody>' +
   DB.phones.map(function (ph) {
     return '<tr><td><strong>' + esc(ph.brand + ' ' + ph.model) + '</strong>' + (ph.isSample ? ' <span class="tag">sample</span>' : '') + '</td>' +
       '<td>' + esc(ph.storage) + '</td><td>' + esc(ph.condition) + '</td><td>' + esc(ph.imei || '—') + '</td>' +
@@ -875,7 +912,7 @@ function viewPhones() {
       (ph.status !== 'Sold' ? '<button class="btn small" onclick="App.setPhoneStatus(\'' + ph.id + '\',\'Sold\')">Mark sold</button> ' : '') +
       (ph.status !== 'Available' ? '<button class="btn small" onclick="App.setPhoneStatus(\'' + ph.id + '\',\'Available\')">Make available</button> ' : '') +
       '<button class="btn small danger" onclick="App.deletePhone(\'' + ph.id + '\')">Delete</button></td></tr>';
-  }).join('') + '</tbody></table></div>';
+  }).join('') + '</tbody></table></div></div>';
 }
 function phoneForm(id) {
   var ph = id ? DB.phones.find(function (x) { return x.id === id; }) : null;
@@ -971,13 +1008,13 @@ function viewReports() {
       return '<div class="bar-row"><span class="bar-date">' + dstr(b.date) + '</span><div class="bar-track"><div class="bar-fill" style="width:' + Math.round((b.total / maxTotal) * 100) + '%"></div></div><span class="bar-val">' + fmt(b.total) + ' (' + b.count + ')</span></div>';
     }).join('') + '</div></div>' +
   '<div class="grid-2">' +
-    '<div class="card"><h2>Top-selling parts</h2>' + (topParts.length ? '<table class="tbl"><thead><tr><th>Part</th><th class="r">Sold</th><th class="r">Revenue</th></tr></thead><tbody>' +
-      topParts.map(function (p) { return '<tr><td>' + esc(p.label) + '</td><td class="r">' + p.qty + '</td><td class="r">' + fmt(p.revenue) + '</td></tr>'; }).join('') + '</tbody></table>' : '<p class="muted">No part sales recorded yet.</p>') + '</div>' +
-    '<div class="card"><h2>Open tickets by technician</h2>' + (Object.keys(byTech).length ? '<table class="tbl"><thead><tr><th>Technician</th><th class="r">Open tickets</th></tr></thead><tbody>' +
-      Object.keys(byTech).map(function (k) { return '<tr><td>' + esc(k) + '</td><td class="r">' + byTech[k] + '</td></tr>'; }).join('') + '</tbody></table>' : '<p class="muted">No open tickets.</p>') + '</div>' +
+    '<div class="card"><h2>Top-selling parts</h2>' + (topParts.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Part</th><th class="r">Sold</th><th class="r">Revenue</th></tr></thead><tbody>' +
+      topParts.map(function (p) { return '<tr><td>' + esc(p.label) + '</td><td class="r">' + p.qty + '</td><td class="r">' + fmt(p.revenue) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<p class="muted">No part sales recorded yet.</p>') + '</div>' +
+    '<div class="card"><h2>Open tickets by technician</h2>' + (Object.keys(byTech).length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Technician</th><th class="r">Open tickets</th></tr></thead><tbody>' +
+      Object.keys(byTech).map(function (k) { return '<tr><td>' + esc(k) + '</td><td class="r">' + byTech[k] + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<p class="muted">No open tickets.</p>') + '</div>' +
   '</div>' +
-  '<div class="card"><h2>Low stock list (' + low.length + ')</h2>' + (low.length ? '<table class="tbl"><thead><tr><th>SKU</th><th>Part</th><th class="r">Stock</th><th class="r">Threshold</th><th class="r">Price</th></tr></thead><tbody>' +
-    low.map(function (p) { return '<tr><td>' + esc(p.sku) + '</td><td>' + esc(p.brand + ' ' + p.model + ' — ' + p.label) + '</td><td class="r bad">' + p.stock + '</td><td class="r">' + p.threshold + '</td><td class="r">' + fmt(p.price) + '</td></tr>'; }).join('') + '</tbody></table>' : '<p class="muted">Nothing low on stock.</p>') + '</div>';
+  '<div class="card"><h2>Low stock list (' + low.length + ')</h2>' + (low.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>SKU</th><th>Part</th><th class="r">Stock</th><th class="r">Threshold</th><th class="r">Price</th></tr></thead><tbody>' +
+    low.map(function (p) { return '<tr><td>' + esc(p.sku) + '</td><td>' + esc(p.brand + ' ' + p.model + ' — ' + p.label) + '</td><td class="r bad">' + p.stock + '</td><td class="r">' + p.threshold + '</td><td class="r">' + fmt(p.price) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<p class="muted">Nothing low on stock.</p>') + '</div>';
 }
 function setReportDays(n) { reportDays = n; renderView(); }
 
@@ -1080,6 +1117,7 @@ var App = {
   addToCart: addToCart, cartQty: cartQty, cartRemove: cartRemove, clearCart: clearCart, completeSale: completeSale,
   customerForm: customerForm, saveCustomer: saveCustomer, deleteCustomer: deleteCustomer, customerDetail: customerDetail,
   ticketForm: ticketForm, saveTicket: saveTicket, ticketDetail: ticketDetail, setTicketStatus: setTicketStatus,
+  ticketBrandChanged: ticketBrandChanged, ticketModelChanged: ticketModelChanged, ticketIssueChanged: ticketIssueChanged,
   saveTicketTech: saveTicketTech, attachPart: attachPart, collectTicket: collectTicket, finishCollect: finishCollect,
   deleteTicket: deleteTicket, setTicketFilter: setTicketFilter,
   setPartsFilter: setPartsFilter, adjustStock: adjustStock, partForm: partForm, savePart: savePart, deletePart: deletePart,

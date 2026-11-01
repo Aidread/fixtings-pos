@@ -1,9 +1,10 @@
 // ============================================================================
 // Fixtings POS — Parts catalog seed
 // A starter catalog covering the most common repair parts for Samsung Galaxy,
-// Google Pixel and Apple iPhone devices. Prices are realistic Jamaican retail
-// (JMD). This is a seed, not an exhaustive list: owners can add any part or
-// model from the Parts & Inventory screen.
+// Google Pixel, Apple iPhone, Xiaomi Redmi, Poco, Huawei, Motorola, Infinix
+// and Tecno devices. Prices are realistic Jamaican retail (JMD). This is a
+// seed, not an exhaustive list: owners can add any part or model from the
+// Parts & Inventory screen.
 // ============================================================================
 
 var PART_TYPES = [
@@ -69,10 +70,41 @@ var DEVICES = [
   { brand: 'Samsung', model: 'Galaxy A34',          tier: 'budget',   bcode: 'SAM', mcode: 'A34'  },
   { brand: 'Samsung', model: 'Galaxy A54',          tier: 'mid',      bcode: 'SAM', mcode: 'A54'  },
   { brand: 'Samsung', model: 'Galaxy Note 20 Ultra', tier: 'flagship', bcode: 'SAM', mcode: 'N20U' },
+  { brand: 'Samsung', model: 'Galaxy S20',          tier: 'mid',      bcode: 'SAM', mcode: 'S20'  },
+  { brand: 'Samsung', model: 'Galaxy S20+',         tier: 'mid',      bcode: 'SAM', mcode: 'S20P' },
+  { brand: 'Samsung', model: 'Galaxy S20 Ultra',    tier: 'flagship', bcode: 'SAM', mcode: 'S20U' },
+  { brand: 'Samsung', model: 'Galaxy S10',          tier: 'budget',   bcode: 'SAM', mcode: 'S10'  },
+  { brand: 'Samsung', model: 'Galaxy S10+',         tier: 'mid',      bcode: 'SAM', mcode: 'S10P' },
+  { brand: 'Samsung', model: 'Galaxy Note 10',      tier: 'mid',      bcode: 'SAM', mcode: 'N10'  },
+  { brand: 'Samsung', model: 'Galaxy Note 10+',     tier: 'flagship', bcode: 'SAM', mcode: 'N10P' },
+  { brand: 'Samsung', model: 'Galaxy Note 20',      tier: 'mid',      bcode: 'SAM', mcode: 'N20'  },
+  { brand: 'Samsung', model: 'Galaxy A12',          tier: 'budget',   bcode: 'SAM', mcode: 'A12'  },
+  { brand: 'Samsung', model: 'Galaxy A13',          tier: 'budget',   bcode: 'SAM', mcode: 'A13'  },
+  { brand: 'Samsung', model: 'Galaxy A22',          tier: 'budget',   bcode: 'SAM', mcode: 'A22'  },
+  { brand: 'Samsung', model: 'Galaxy A23',          tier: 'budget',   bcode: 'SAM', mcode: 'A23'  },
+  { brand: 'Samsung', model: 'Galaxy A32',          tier: 'budget',   bcode: 'SAM', mcode: 'A32'  },
+  { brand: 'Samsung', model: 'Galaxy A33',          tier: 'budget',   bcode: 'SAM', mcode: 'A33'  },
+  { brand: 'Samsung', model: 'Galaxy A52',          tier: 'mid',      bcode: 'SAM', mcode: 'A52'  },
+  { brand: 'Samsung', model: 'Galaxy A53',          tier: 'mid',      bcode: 'SAM', mcode: 'A53'  },
+  { brand: 'Samsung', model: 'Galaxy A72',          tier: 'mid',      bcode: 'SAM', mcode: 'A72'  },
+  { brand: 'Samsung', model: 'Galaxy A73',          tier: 'mid',      bcode: 'SAM', mcode: 'A73'  },
+  { brand: 'Samsung', model: 'Galaxy Z Flip 3',     tier: 'flagship', bcode: 'SAM', mcode: 'ZFL3' },
+  { brand: 'Samsung', model: 'Galaxy Z Flip 4',     tier: 'flagship', bcode: 'SAM', mcode: 'ZFL4' },
+  { brand: 'Samsung', model: 'Galaxy Z Fold 3',     tier: 'flagship', bcode: 'SAM', mcode: 'ZFO3' },
+  { brand: 'Samsung', model: 'Galaxy Z Fold 4',     tier: 'flagship', bcode: 'SAM', mcode: 'ZFO4' },
   // Google Pixel
   { brand: 'Google', model: 'Pixel 6', tier: 'mid',      bcode: 'GOO', mcode: 'PX6' },
   { brand: 'Google', model: 'Pixel 7', tier: 'mid',      bcode: 'GOO', mcode: 'PX7' },
   { brand: 'Google', model: 'Pixel 8', tier: 'flagship', bcode: 'GOO', mcode: 'PX8' },
+  { brand: 'Google', model: 'Pixel 4',  tier: 'budget',   bcode: 'GOO', mcode: 'PX4'  },
+  { brand: 'Google', model: 'Pixel 4a', tier: 'budget',   bcode: 'GOO', mcode: 'PX4A' },
+  { brand: 'Google', model: 'Pixel 5',  tier: 'budget',   bcode: 'GOO', mcode: 'PX5'  },
+  { brand: 'Google', model: 'Pixel 5a', tier: 'budget',   bcode: 'GOO', mcode: 'PX5A' },
+  { brand: 'Google', model: 'Pixel 6a', tier: 'mid',      bcode: 'GOO', mcode: 'PX6A' },
+  { brand: 'Google', model: 'Pixel 7a', tier: 'mid',      bcode: 'GOO', mcode: 'PX7A' },
+  { brand: 'Google', model: 'Pixel 8a', tier: 'mid',      bcode: 'GOO', mcode: 'PX8A' },
+  { brand: 'Google', model: 'Pixel 9',  tier: 'flagship', bcode: 'GOO', mcode: 'PX9'  },
+  { brand: 'Google', model: 'Pixel 9 Pro', tier: 'flagship', bcode: 'GOO', mcode: 'PX9P' },
   // Apple iPhone
   { brand: 'Apple', model: 'iPhone 11',          tier: 'budget',   bcode: 'APP', mcode: 'IP11'   },
   { brand: 'Apple', model: 'iPhone 11 Pro',      tier: 'mid',      bcode: 'APP', mcode: 'IP11P'  },
@@ -93,7 +125,45 @@ var DEVICES = [
   { brand: 'Apple', model: 'iPhone 16 Pro Max',  tier: 'flagship', bcode: 'APP', mcode: 'IP16PM' },
   { brand: 'Apple', model: 'iPhone 17',          tier: 'flagship', bcode: 'APP', mcode: 'IP17'   },
   { brand: 'Apple', model: 'iPhone 17 Pro',      tier: 'flagship', bcode: 'APP', mcode: 'IP17P'  },
-  { brand: 'Apple', model: 'iPhone 17 Pro Max',  tier: 'flagship', bcode: 'APP', mcode: 'IP17PM' }
+  { brand: 'Apple', model: 'iPhone 17 Pro Max',  tier: 'flagship', bcode: 'APP', mcode: 'IP17PM' },
+  // Apple iPhone (older)
+  { brand: 'Apple', model: 'iPhone 8',       tier: 'budget', bcode: 'APP', mcode: 'IP8'    },
+  { brand: 'Apple', model: 'iPhone 8 Plus',  tier: 'budget', bcode: 'APP', mcode: 'IP8P'   },
+  { brand: 'Apple', model: 'iPhone X',       tier: 'budget', bcode: 'APP', mcode: 'IPX'    },
+  { brand: 'Apple', model: 'iPhone XS',      tier: 'mid',    bcode: 'APP', mcode: 'IPXS'   },
+  { brand: 'Apple', model: 'iPhone XS Max',  tier: 'mid',    bcode: 'APP', mcode: 'IPXSM'  },
+  { brand: 'Apple', model: 'iPhone XR',      tier: 'budget', bcode: 'APP', mcode: 'IPXR'   },
+  { brand: 'Apple', model: 'iPhone SE (2020)', tier: 'budget', bcode: 'APP', mcode: 'IPSE20' },
+  { brand: 'Apple', model: 'iPhone SE (2022)', tier: 'budget', bcode: 'APP', mcode: 'IPSE22' },
+  // Xiaomi Redmi
+  { brand: 'Xiaomi', model: 'Redmi Note 10',      tier: 'budget', bcode: 'XIA', mcode: 'RN10'  },
+  { brand: 'Xiaomi', model: 'Redmi Note 10 Pro',  tier: 'mid',    bcode: 'XIA', mcode: 'RN10P' },
+  { brand: 'Xiaomi', model: 'Redmi Note 11',      tier: 'budget', bcode: 'XIA', mcode: 'RN11'  },
+  { brand: 'Xiaomi', model: 'Redmi Note 11 Pro',  tier: 'mid',    bcode: 'XIA', mcode: 'RN11P' },
+  { brand: 'Xiaomi', model: 'Redmi Note 12',      tier: 'budget', bcode: 'XIA', mcode: 'RN12'  },
+  { brand: 'Xiaomi', model: 'Redmi Note 12 Pro',  tier: 'mid',    bcode: 'XIA', mcode: 'RN12P' },
+  { brand: 'Xiaomi', model: 'Redmi Note 13',      tier: 'budget', bcode: 'XIA', mcode: 'RN13'  },
+  { brand: 'Xiaomi', model: 'Redmi Note 13 Pro',  tier: 'mid',    bcode: 'XIA', mcode: 'RN13P' },
+  // Poco
+  { brand: 'Poco', model: 'X3',     tier: 'budget', bcode: 'POC', mcode: 'PCX3'  },
+  { brand: 'Poco', model: 'X4 Pro', tier: 'mid',    bcode: 'POC', mcode: 'PCX4P' },
+  { brand: 'Poco', model: 'X5',     tier: 'mid',    bcode: 'POC', mcode: 'PCX5'  },
+  // Huawei
+  { brand: 'Huawei', model: 'P30',    tier: 'mid', bcode: 'HUA', mcode: 'HP30' },
+  { brand: 'Huawei', model: 'P40',    tier: 'mid', bcode: 'HUA', mcode: 'HP40' },
+  { brand: 'Huawei', model: 'Nova 9', tier: 'mid', bcode: 'HUA', mcode: 'HNV9' },
+  // Motorola
+  { brand: 'Motorola', model: 'G20', tier: 'budget', bcode: 'MOT', mcode: 'MG20' },
+  { brand: 'Motorola', model: 'G30', tier: 'budget', bcode: 'MOT', mcode: 'MG30' },
+  { brand: 'Motorola', model: 'G50', tier: 'budget', bcode: 'MOT', mcode: 'MG50' },
+  { brand: 'Motorola', model: 'G60', tier: 'budget', bcode: 'MOT', mcode: 'MG60' },
+  // Infinix
+  { brand: 'Infinix', model: 'Note 10', tier: 'budget', bcode: 'INF', mcode: 'IN10' },
+  { brand: 'Infinix', model: 'Note 11', tier: 'budget', bcode: 'INF', mcode: 'IN11' },
+  { brand: 'Infinix', model: 'Note 12', tier: 'budget', bcode: 'INF', mcode: 'IN12' },
+  // Tecno
+  { brand: 'Tecno', model: 'Spark 10', tier: 'budget', bcode: 'TEC', mcode: 'TS10' },
+  { brand: 'Tecno', model: 'Camon 20', tier: 'budget', bcode: 'TEC', mcode: 'TC20' }
 ];
 
 // Deterministic 0..1 hash so seeded stock levels are stable across installs.

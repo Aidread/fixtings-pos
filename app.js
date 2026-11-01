@@ -141,13 +141,13 @@ function seedDB() {
 
 // ---------------- roles & permissions ----------------
 var ROLES = {
-  owner: { label: 'Owner', sections: ['dashboard', 'pos', 'customers', 'repairs', 'parts', 'phones', 'reports', 'settings'] },
-  sales: { label: 'Sales Assistant', sections: ['dashboard', 'pos', 'customers', 'phones'] },
-  tech:  { label: 'Technician', sections: ['dashboard', 'repairs', 'parts'] }
+  owner: { label: 'Owner', sections: ['dashboard', 'pos', 'customers', 'repairs', 'parts', 'specs', 'phones', 'reports', 'settings'] },
+  sales: { label: 'Sales Assistant', sections: ['dashboard', 'pos', 'customers', 'phones', 'specs'] },
+  tech:  { label: 'Technician', sections: ['dashboard', 'repairs', 'parts', 'specs'] }
 };
 var SECTION_LABELS = {
   dashboard: 'Dashboard', pos: 'New Sale', customers: 'Customers', repairs: 'Repairs',
-  parts: 'Parts & Inventory', phones: 'Phones for Sale', reports: 'Reports', settings: 'Settings'
+  parts: 'Parts & Inventory', specs: 'Device Specs', phones: 'Phones for Sale', reports: 'Reports', settings: 'Settings'
 };
 function role() { return DB.role || 'owner'; }
 function canSee(section) { return ROLES[role()].sections.indexOf(section) !== -1; }
@@ -160,6 +160,9 @@ var posQuery = '';
 var partsFilter = { brand: '', model: '', type: '', q: '', lowOnly: false };
 var ticketFilter = '';
 var reportDays = 14;
+var specDevice = 'IP13';  // mcode of the device shown in Device Specs
+var specTab = 'device';   // 'device' | 'shared'
+var specType = '';        // part type selected in the compatibility lookup
 
 // ---------------- modal helpers ----------------
 function openModal(html) {
@@ -215,6 +218,7 @@ function renderView() {
   else if (currentView === 'customers') v.innerHTML = viewCustomers();
   else if (currentView === 'repairs') v.innerHTML = viewRepairs();
   else if (currentView === 'parts') v.innerHTML = viewParts();
+  else if (currentView === 'specs') v.innerHTML = viewSpecs();
   else if (currentView === 'phones') v.innerHTML = viewPhones();
   else if (currentView === 'reports') v.innerHTML = viewReports();
   else if (currentView === 'settings') v.innerHTML = viewSettings();
@@ -503,7 +507,7 @@ function ticketForm() {
     '<form onsubmit="App.saveTicket(event)">' +
     '<label class="lbl">Customer *</label><select name="customerId" class="input" required><option value="">Select customer…</option>' +
     DB.customers.map(function (c) { return '<option value="' + c.id + '">' + esc(c.name) + ' — ' + esc(c.phone) + '</option>'; }).join('') + '</select>' +
-    '<div class="grid-2col"><div><label class="lbl">Brand *</label><select name="brand" class="input" required><option value="">Select…</option><option>Apple</option><option>Samsung</option><option>Google</option><option>Other</option></select></div>' +
+    '<div class="grid-2col"><div><label class="lbl">Brand *</label><select name="brand" class="input" required><option value="">Select…</option><option>Apple</option><option>Samsung</option><option>Google</option><option>Xiaomi</option><option>Poco</option><option>Huawei</option><option>Motorola</option><option>Infinix</option><option>Tecno</option><option>Other</option></select></div>' +
     '<div><label class="lbl">Model *</label><input name="model" class="input" required placeholder="e.g. iPhone 13"></div></div>' +
     '<label class="lbl">Issue / problem *</label><textarea name="issue" class="input" rows="2" required placeholder="e.g. Cracked screen"></textarea>' +
     '<div class="grid-2col"><div><label class="lbl">Quoted price (JMD) *</label><input name="quoted" type="number" min="0" step="1" class="input" required></div>' +
@@ -546,7 +550,21 @@ function ticketDetail(id) {
     '<h4>Parts used (' + fmt(partsTotal) + ')</h4>' +
     (t.partsUsed.length ? '<table class="tbl"><thead><tr><th>Part</th><th class="r">Qty</th><th class="r">Price</th></tr></thead><tbody>' +
       t.partsUsed.map(function (p) { return '<tr><td>' + esc(p.label) + '</td><td class="r">' + p.qty + '</td><td class="r">' + fmt(p.price * p.qty) + '</td></tr>'; }).join('') + '</tbody></table>' : '<p class="muted">No parts attached yet.</p>') +
-    (t.status !== 'Collected' ? '<div class="row"><select id="attachPartSel" class="input"><option value="">Attach a part…</option>' +
+    (t.status !== 'Collected' ? (function () {
+      var fitting = (typeof partFitsDevice === 'function') ? DB.parts.filter(function (p) { return p.stock > 0 && partFitsDevice(p, t.brand, t.model); }) : [];
+      var own = fitting.filter(function (p) { return p.brand === t.brand && p.model === t.model; });
+      var shared = fitting.filter(function (p) { return !(p.brand === t.brand && p.model === t.model); });
+      var rows = '';
+      function fitRow(p) {
+        var kind = partFitsDevice(p, t.brand, t.model);
+        return '<tr><td>' + esc(p.label) + '<div class="muted small">listed for ' + esc(p.brand + ' ' + p.model) + ' &middot; ' + p.stock + ' in stock</div></td><td>' + fitBadge(kind) + '</td><td class="r">' + fmt(p.price) + '</td><td class="r"><button class="btn small" onclick="App.attachPartById(\'' + t.id + '\',\'' + p.id + '\')">Attach</button></td></tr>';
+      }
+      if (own.length) rows += own.map(fitRow).join('');
+      if (shared.length) rows += '<tr><td colspan="4" class="muted small"><strong>Shared parts from other models that fit this device:</strong></td></tr>' + shared.map(fitRow).join('');
+      return '<h4>Parts that fit this ' + esc(t.brand + ' ' + t.model) + ' (' + fitting.length + ' in stock)</h4>' +
+        (fitting.length ? '<table class="tbl"><thead><tr><th>Part</th><th>Fit</th><th class="r">Price</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>' : '<p class="muted">Nothing in stock fits this device.</p>');
+    })() : '') +
+    (t.status !== 'Collected' ? '<div class="row"><select id="attachPartSel" class="input"><option value="">Attach any other part…</option>' +
       DB.parts.filter(function (p) { return p.stock > 0; }).map(function (p) { return '<option value="' + p.id + '">' + esc(p.brand + ' ' + p.model + ' — ' + p.label + ' (' + p.stock + ' left) — ' + fmt(p.price)) + '</option>'; }).join('') +
       '</select><button class="btn" onclick="App.attachPart(\'' + t.id + '\')">Attach part</button></div>' : '') +
     '<p class="muted small">Labour portion of quote: ' + fmt(labour) + ' (quoted price less parts used).</p>' +
@@ -572,8 +590,11 @@ function saveTicketTech(id) {
 function attachPart(ticketId) {
   var sel = $('#attachPartSel');
   if (!sel || !sel.value) { toast('Pick a part first'); return; }
+  attachPartById(ticketId, sel.value);
+}
+function attachPartById(ticketId, partId) {
   var t = DB.tickets.find(function (x) { return x.id === ticketId; });
-  var p = DB.parts.find(function (x) { return x.id === sel.value; });
+  var p = DB.parts.find(function (x) { return x.id === partId; });
   if (!t || !p || p.stock <= 0) { toast('Part not available'); return; }
   p.stock -= 1;
   var ex = t.partsUsed.find(function (u) { return u.partId === p.id; });
@@ -643,7 +664,7 @@ function filteredParts() {
   });
 }
 function viewParts() {
-  var brands = ['Apple', 'Samsung', 'Google'];
+  var brands = ['Apple', 'Samsung', 'Google', 'Xiaomi', 'Poco', 'Huawei', 'Motorola', 'Infinix', 'Tecno'];
   return '' +
   '<h1>Parts &amp; Inventory</h1><p class="sub">' + DB.parts.length + ' parts in the catalog &middot; ' + lowStock().length + ' at or below threshold. ' +
   (canSeeCosts() ? 'Costs shown (owner only).' : 'Costs hidden for your role.') + '</p>' +
@@ -666,15 +687,21 @@ function renderPartsTable() {
   var list = filteredParts().slice(0, 200);
   var costs = canSeeCosts();
   box.innerHTML = '<p class="muted small">Showing ' + list.length + ' of ' + DB.parts.length + ' parts' + (filteredParts().length > 200 ? ' (first 200 — narrow the filters)' : '') + '.</p>' +
-  '<table class="tbl"><thead><tr><th>SKU</th><th>Part</th><th>Device</th><th class="r">Stock</th>' + (costs ? '<th class="r">Cost</th>' : '') + '<th class="r">Price</th><th class="r">Threshold</th><th></th></tr></thead><tbody>' +
+  '<table class="tbl"><thead><tr><th>SKU</th><th>Part</th><th>Device</th><th>Also fits</th><th class="r">Stock</th>' + (costs ? '<th class="r">Cost</th>' : '') + '<th class="r">Price</th><th class="r">Threshold</th><th></th></tr></thead><tbody>' +
   (list.length ? list.map(function (p) {
     var low = p.stock <= p.threshold;
-    return '<tr class="' + (low ? 'low-row' : '') + '"><td>' + esc(p.sku) + '</td><td>' + esc(p.label) + '</td><td>' + esc(p.brand + ' ' + p.model) + '</td>' +
+    var fits = (typeof fitsForPart === 'function') ? fitsForPart(p) : { confirmed: [], specMatched: [] };
+    var fitsHtml = '<span class="muted">—</span>';
+    if (fits.confirmed.length || fits.specMatched.length) {
+      fitsHtml = '<span class="small">' + fits.confirmed.map(function (m) { return esc(m); }).join('<br>') + '</span>' +
+        (fits.specMatched.length ? '<br><span class="small muted">verify: ' + fits.specMatched.map(function (m) { return esc(m); }).join(', ') + '</span>' : '');
+    }
+    return '<tr class="' + (low ? 'low-row' : '') + '"><td>' + esc(p.sku) + '</td><td>' + esc(p.label) + '</td><td>' + esc(p.brand + ' ' + p.model) + '</td><td>' + fitsHtml + '</td>' +
       '<td class="r"><button class="btn tiny" onclick="App.adjustStock(\'' + p.id + '\',-1)">−</button> <strong class="' + (low ? 'bad' : '') + '">' + p.stock + '</strong> <button class="btn tiny" onclick="App.adjustStock(\'' + p.id + '\',1)">+</button></td>' +
       (costs ? '<td class="r">' + fmt(p.cost) + '</td>' : '') +
       '<td class="r">' + fmt(p.price) + '</td><td class="r">' + p.threshold + '</td>' +
       '<td class="r">' + (role() === 'owner' ? '<button class="btn small" onclick="App.partForm(\'' + p.id + '\')">Edit</button> <button class="btn small danger" onclick="App.deletePart(\'' + p.id + '\')">Delete</button>' : '<span class="muted small">view only</span>') + '</td></tr>';
-  }).join('') : '<tr><td colspan="8" class="muted">No parts match these filters.</td></tr>') + '</tbody></table>';
+  }).join('') : '<tr><td colspan="9" class="muted">No parts match these filters.</td></tr>') + '</tbody></table>';
 }
 function setPartsFilter(k, v) {
   partsFilter[k] = v;
@@ -694,11 +721,19 @@ function partForm(id) {
   openModal('<h3>' + (p ? 'Edit part' : 'Add part') + '</h3>' +
     '<form onsubmit="App.savePart(event,\'' + (p ? p.id : '') + '\')">' +
     '<div class="grid-2col"><div><label class="lbl">Brand *</label><select name="brand" class="input" required><option value="">Select…</option>' +
-    ['Apple', 'Samsung', 'Google', 'Other'].map(function (b) { return '<option' + (p && p.brand === b ? ' selected' : '') + '>' + b + '</option>'; }).join('') + '</select></div>' +
+    ['Apple', 'Samsung', 'Google', 'Xiaomi', 'Poco', 'Huawei', 'Motorola', 'Infinix', 'Tecno', 'Other'].map(function (b) { return '<option' + (p && p.brand === b ? ' selected' : '') + '>' + b + '</option>'; }).join('') + '</select></div>' +
     '<div><label class="lbl">Model *</label><input name="model" class="input" required list="modelList" value="' + esc(p ? p.model : '') + '" placeholder="e.g. iPhone 13"><datalist id="modelList">' +
     models.map(function (m) { return '<option value="' + esc(m) + '">'; }).join('') + '</datalist></div></div>' +
     '<label class="lbl">Part type *</label><select name="type" class="input" required>' +
     PART_TYPES.map(function (t) { return '<option value="' + t.key + '"' + (p && p.type === t.key ? ' selected' : '') + '>' + t.label + '</option>'; }).join('') + '</select>' +
+    '<label class="lbl">Also fits — other devices this same part fits (optional)</label>' +
+    '<select name="fits" class="input" multiple size="6">' +
+    DEVICES.filter(function (d) { return !(p && d.brand === p.brand && d.model === p.model); }).map(function (d) {
+      var name = d.brand + ' ' + d.model;
+      var sel = p && p.fits && p.fits.indexOf(name) !== -1;
+      return '<option value="' + esc(name) + '"' + (sel ? ' selected' : '') + '>' + esc(name) + '</option>';
+    }).join('') + '</select>' +
+    '<p class="muted small">Hold Ctrl (or Cmd on Mac) to pick more than one. Shared-part links from the catalog already apply on top of this.</p>' +
     '<div class="grid-2col"><div><label class="lbl">Cost (JMD)</label><input name="cost" type="number" min="0" step="1" class="input" value="' + (p ? p.cost : 0) + '"></div>' +
     '<div><label class="lbl">Selling price (JMD) *</label><input name="price" type="number" min="0" step="1" class="input" required value="' + (p ? p.price : '') + '"></div></div>' +
     '<div class="grid-2col"><div><label class="lbl">Stock on hand</label><input name="stock" type="number" min="0" step="1" class="input" value="' + (p ? p.stock : 0) + '"></div>' +
@@ -710,21 +745,28 @@ function savePart(ev, id) {
   ev.preventDefault();
   var f = ev.target;
   var type = PART_TYPES.find(function (t) { return t.key === f.type.value; }) || PART_TYPES[0];
+  var fits = [];
+  if (f.fits && f.fits.options) {
+    for (var i = 0; i < f.fits.options.length; i++) {
+      if (f.fits.options[i].selected) fits.push(f.fits.options[i].value);
+    }
+  }
   var data = {
     brand: f.brand.value, model: f.model.value.trim(), type: type.key, label: type.label,
-    cost: num(f.cost.value), price: num(f.price.value), stock: Math.max(0, Math.round(num(f.stock.value))), threshold: Math.max(0, Math.round(num(f.threshold.value, 2)))
+    cost: num(f.cost.value), price: num(f.price.value), stock: Math.max(0, Math.round(num(f.stock.value))), threshold: Math.max(0, Math.round(num(f.threshold.value, 2))),
+    fits: fits
   };
   if (!data.brand || !data.model || data.price <= 0) { toast('Brand, model and a selling price are required'); return; }
   if (id) {
     var p = DB.parts.find(function (x) { return x.id === id; });
-    if (p) { p.brand = data.brand; p.model = data.model; p.type = data.type; p.label = data.label; p.cost = data.cost; p.price = data.price; p.stock = data.stock; p.threshold = data.threshold; }
+    if (p) { p.brand = data.brand; p.model = data.model; p.type = data.type; p.label = data.label; p.cost = data.cost; p.price = data.price; p.stock = data.stock; p.threshold = data.threshold; p.fits = data.fits; }
   } else {
-    var bcode = { Apple: 'APP', Samsung: 'SAM', Google: 'GOO' }[data.brand] || 'GEN';
+    var bcode = { Apple: 'APP', Samsung: 'SAM', Google: 'GOO', Xiaomi: 'XIA', Poco: 'POC', Huawei: 'HUA', Motorola: 'MOT', Infinix: 'INF', Tecno: 'TEC' }[data.brand] || 'GEN';
     var mcode = data.model.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6) || 'MOD';
     var sku = bcode + '-' + mcode + '-' + type.code;
     var n = 2;
     while (DB.parts.some(function (x) { return x.sku === sku; })) { sku = bcode + '-' + mcode + '-' + type.code + '-' + n; n += 1; }
-    DB.parts.push({ id: uid('P-'), sku: sku, brand: data.brand, model: data.model, type: data.type, label: data.label, cost: data.cost, price: data.price, stock: data.stock, threshold: data.threshold, isSeed: false });
+    DB.parts.push({ id: uid('P-'), sku: sku, brand: data.brand, model: data.model, type: data.type, label: data.label, cost: data.cost, price: data.price, stock: data.stock, threshold: data.threshold, fits: data.fits, isSeed: false });
   }
   saveDB(); closeModal(); renderView(); toast('Part saved');
 }
@@ -735,6 +777,102 @@ function deletePart(id) {
     DB.parts = DB.parts.filter(function (x) { return x.id !== id; });
     saveDB(); renderView(); toast('Part deleted');
   });
+}
+
+// ---------------- device specs & shared parts ----------------
+function specSelectOptions() {
+  var brands = [];
+  DEVICES.forEach(function (d) { if (brands.indexOf(d.brand) === -1) brands.push(d.brand); });
+  return brands.map(function (b) {
+    var opts = DEVICES.filter(function (d) { return d.brand === b; }).map(function (d) {
+      return '<option value="' + d.mcode + '"' + (specDevice === d.mcode ? ' selected' : '') + '>' + esc(d.model) + '</option>';
+    }).join('');
+    return '<optgroup label="' + esc(b) + '">' + opts + '</optgroup>';
+  }).join('');
+}
+function setSpecDevice(v) { specDevice = v; renderView(); }
+function setSpecTab(v) { specTab = v; renderView(); }
+function setSpecType(v) { specType = v; renderView(); }
+function typeLabel(key) {
+  var t = PART_TYPES.find(function (x) { return x.key === key; });
+  return t ? t.label : key;
+}
+function fitBadge(kind) {
+  if (kind === 'own') return '<span class="badge fit-own">This device</span>';
+  if (kind === 'confirmed') return '<span class="badge fit-confirmed">Shared part</span>';
+  if (kind === 'specMatched') return '<span class="badge fit-spec">Verify fit</span>';
+  return '';
+}
+
+function viewSpecs() {
+  var tabs = '<div class="tabs"><button class="btn small' + (specTab === 'device' ? ' primary' : '') + '" onclick="App.setSpecTab(\'device\')">Device Specs</button> ' +
+    '<button class="btn small' + (specTab === 'shared' ? ' primary' : '') + '" onclick="App.setSpecTab(\'shared\')">Shared Parts</button></div>';
+  if (specTab === 'shared') return '<h1>Shared Parts</h1><p class="sub">One part, several phones — what fits what.</p>' + tabs + viewSharedParts();
+  return '<h1>Device Specs</h1><p class="sub">' + DEVICES.length + ' devices &middot; specs from GSMArena. Pick a device to see its specs and the parts in stock that fit it.</p>' + tabs + viewSpecDevice();
+}
+
+function viewSpecDevice() {
+  var dev = DEVICES.find(function (d) { return d.mcode === specDevice; }) || DEVICES[0];
+  var spec = (typeof specFor === 'function') ? specFor(dev.mcode) : null;
+  var html = '<div class="card"><label class="lbl">Device</label>' +
+    '<select class="input" onchange="App.setSpecDevice(this.value)">' + specSelectOptions() + '</select>';
+  if (spec) {
+    html += '<div class="spec-head"><div><h2>' + esc(spec.brand + ' ' + spec.model) + '</h2>' +
+      '<p class="muted small">Released ' + spec.year + ' &middot; Specs: <a href="' + esc(spec.url) + '" target="_blank" rel="noopener">GSMArena</a></p></div></div>' +
+      '<div class="spec-grid">' +
+      '<div class="spec-cell"><div class="spec-label">Display</div><div class="spec-value">' + spec.display + '&Prime; ' + esc(spec.panel) + '</div><div class="muted small">' + esc(spec.resolution) + ' &middot; ' + (spec.refresh ? spec.refresh + 'Hz' : '—') + '</div></div>' +
+      '<div class="spec-cell"><div class="spec-label">Battery</div><div class="spec-value">' + spec.battery.toLocaleString('en-US') + ' mAh</div><div class="muted small">' + (spec.chargingW ? spec.chargingW + 'W wired charging' : 'Wired charging (PD)') + '</div></div>' +
+      '<div class="spec-cell"><div class="spec-label">Charging port</div><div class="spec-value">' + esc(spec.port) + '</div></div>' +
+      '<div class="spec-cell"><div class="spec-label">Chipset</div><div class="spec-value">' + esc(spec.chipset) + '</div></div>' +
+      '<div class="spec-cell"><div class="spec-label">RAM / Storage</div><div class="spec-value">' + esc(spec.ram) + '</div><div class="muted small">' + esc(spec.storage) + '</div></div>' +
+      '<div class="spec-cell"><div class="spec-label">Released</div><div class="spec-value">' + spec.year + '</div></div>' +
+      '</div>';
+  } else {
+    html += '<p class="muted">No specs on file for this device yet.</p>';
+  }
+  html += '</div>';
+
+  // Parts in stock that fit this device (own parts + shared parts).
+  var fitting = DB.parts.filter(function (p) {
+    return p.stock > 0 && (typeof partFitsDevice === 'function') && partFitsDevice(p, dev.brand, dev.model);
+  });
+  html += '<div class="card"><h2>Parts in stock that fit the ' + esc(dev.brand + ' ' + dev.model) + ' (' + fitting.length + ')</h2>' +
+    (fitting.length ? '<table class="tbl"><thead><tr><th>Part</th><th>Listed for</th><th>Fit</th><th class="r">Stock</th><th class="r">Price</th></tr></thead><tbody>' +
+      fitting.map(function (p) {
+        var kind = partFitsDevice(p, dev.brand, dev.model);
+        return '<tr><td>' + esc(p.label) + '</td><td>' + esc(p.brand + ' ' + p.model) + '</td><td>' + fitBadge(kind) + '</td><td class="r">' + p.stock + '</td><td class="r">' + fmt(p.price) + '</td></tr>';
+      }).join('') + '</tbody></table>' : '<p class="muted">Nothing in stock fits this device.</p>') + '</div>';
+
+  // Compatibility lookup: pick a part type, see which devices share it.
+  var groups = specType && (typeof sharedGroupsFor === 'function') ? sharedGroupsFor(specType) : [];
+  html += '<div class="card"><h2>What fits what?</h2><p class="muted small">Pick a part type to see every device it fits — confirmed shares first, spec-matched (verify fit) after.</p>' +
+    '<select class="input" onchange="App.setSpecType(this.value)"><option value="">Select a part type…</option>' +
+    PART_TYPES.map(function (t) { return '<option value="' + t.key + '"' + (specType === t.key ? ' selected' : '') + '>' + t.label + '</option>'; }).join('') + '</select>' +
+    (specType ? (groups.length ? groups.map(function (g) {
+      return '<div class="compat-group' + (g.status === 'specMatched' ? ' spec' : '') + '"><strong>' + esc(typeLabel(g.part)) + '</strong> ' +
+        (g.status === 'confirmed' ? '<span class="badge fit-confirmed">Confirmed shared</span>' : '<span class="badge fit-spec">Spec-matched — verify fit</span>') +
+        '<div>' + g.models.map(function (m) { return esc(m); }).join(' &middot; ') + '</div>' +
+        '<div class="muted small">' + esc(g.note) + '</div></div>';
+    }).join('') : '<p class="muted">No shared parts recorded for ' + esc(typeLabel(specType)) + ' — every device uses its own.</p>') : '') +
+    '</div>';
+  return html;
+}
+
+function viewSharedParts() {
+  var confirmed = (typeof SHARED_PARTS !== 'undefined') ? SHARED_PARTS.filter(function (g) { return g.status === 'confirmed'; }) : [];
+  var specMatched = (typeof SHARED_PARTS !== 'undefined') ? SHARED_PARTS.filter(function (g) { return g.status === 'specMatched'; }) : [];
+  function groupRows(list) {
+    return list.map(function (g) {
+      return '<tr><td><strong>' + esc(typeLabel(g.part)) + '</strong></td><td>' + g.models.map(function (m) { return esc(m); }).join('<br>') + '</td><td>' + esc(g.note) + '</td></tr>';
+    }).join('');
+  }
+  return '' +
+  '<div class="card"><h2>Confirmed shared parts (' + confirmed.length + ')</h2>' +
+    '<p class="muted small">These parts are established in the repair trade as interchangeable between the listed models — same part, same fit.</p>' +
+    (confirmed.length ? '<table class="tbl"><thead><tr><th>Part</th><th>Fits</th><th>Why</th></tr></thead><tbody>' + groupRows(confirmed) + '</tbody></table>' : '<p class="muted">None recorded yet.</p>') + '</div>' +
+  '<div class="card spec-warn"><h2>Spec-matched only — verify fit before ordering (' + specMatched.length + ')</h2>' +
+    '<p class="muted small">These models share the same size and type on paper (same screen size, same battery capacity), but the fit is NOT confirmed. Check connectors, brackets and shape before ordering or fitting.</p>' +
+    (specMatched.length ? '<table class="tbl"><thead><tr><th>Part</th><th>Looks the same on</th><th>Why it is only a candidate</th></tr></thead><tbody>' + groupRows(specMatched) + '</tbody></table>' : '<p class="muted">None recorded yet.</p>') + '</div>';
 }
 
 // ---------------- phones for sale ----------------
@@ -758,7 +896,7 @@ function phoneForm(id) {
   openModal('<h3>' + (ph ? 'Edit phone' : 'Add phone for sale') + '</h3>' +
     '<form onsubmit="App.savePhone(event,\'' + (ph ? ph.id : '') + '\')">' +
     '<div class="grid-2col"><div><label class="lbl">Brand *</label><select name="brand" class="input" required><option value="">Select…</option>' +
-    ['Apple', 'Samsung', 'Google', 'Other'].map(function (b) { return '<option' + (ph && ph.brand === b ? ' selected' : '') + '>' + b + '</option>'; }).join('') + '</select></div>' +
+    ['Apple', 'Samsung', 'Google', 'Xiaomi', 'Poco', 'Huawei', 'Motorola', 'Infinix', 'Tecno', 'Other'].map(function (b) { return '<option' + (ph && ph.brand === b ? ' selected' : '') + '>' + b + '</option>'; }).join('') + '</select></div>' +
     '<div><label class="lbl">Model *</label><input name="model" class="input" required value="' + esc(ph ? ph.model : '') + '" placeholder="e.g. iPhone 13"></div></div>' +
     '<div class="grid-2col"><div><label class="lbl">Storage *</label><select name="storage" class="input" required>' +
     ['64GB', '128GB', '256GB', '512GB', '1TB'].map(function (s) { return '<option' + (ph && ph.storage === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select></div>' +
@@ -959,6 +1097,7 @@ var App = {
   saveTicketTech: saveTicketTech, attachPart: attachPart, collectTicket: collectTicket, finishCollect: finishCollect,
   deleteTicket: deleteTicket, setTicketFilter: setTicketFilter,
   setPartsFilter: setPartsFilter, adjustStock: adjustStock, partForm: partForm, savePart: savePart, deletePart: deletePart,
+  setSpecDevice: setSpecDevice, setSpecTab: setSpecTab, setSpecType: setSpecType, attachPartById: attachPartById,
   phoneForm: phoneForm, savePhone: savePhone, setPhoneStatus: setPhoneStatus, deletePhone: deletePhone,
   setReportDays: setReportDays, saveSettings: saveSettings, clearSampleData: clearSampleData, resetAll: resetAll,
   exportData: exportData, importData: importData, setRole: setRole
@@ -989,6 +1128,12 @@ if (typeof window !== 'undefined') {
     completeSale: completeSale,
     saveTicket: saveTicket,
     savePart: savePart,
+    specFor: (typeof specFor === 'function') ? specFor : null,
+    fitsForPart: (typeof fitsForPart === 'function') ? fitsForPart : null,
+    partFitsDevice: (typeof partFitsDevice === 'function') ? partFitsDevice : null,
+    deviceSpecs: (typeof DEVICE_SPECS !== 'undefined') ? DEVICE_SPECS : null,
+    sharedParts: (typeof SHARED_PARTS !== 'undefined') ? SHARED_PARTS : null,
+    devices: (typeof DEVICES !== 'undefined') ? DEVICES : null,
     fmt: fmt
   };
 }

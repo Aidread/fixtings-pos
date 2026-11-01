@@ -166,14 +166,8 @@ var DEVICES = [
   { brand: 'Tecno', model: 'Camon 20', tier: 'budget', bcode: 'TEC', mcode: 'TC20' }
 ];
 
-// Deterministic 0..1 hash so seeded stock levels are stable across installs.
-function skuHash(str) {
-  var h = 0;
-  for (var i = 0; i < str.length; i++) { h = (h * 31 + str.charCodeAt(i)) >>> 0; }
-  return (h % 1000) / 1000;
-}
-
 // Build the full seed catalog: one entry per device x part type.
+// Stock starts at 0 — the owner adds real stock as parts are bought in.
 function buildCatalog() {
   var parts = [];
   for (var d = 0; d < DEVICES.length; d++) {
@@ -181,8 +175,7 @@ function buildCatalog() {
     for (var t = 0; t < PART_TYPES.length; t++) {
       var type = PART_TYPES[t];
       var p = PRICE_TABLE[dev.tier][type.key];
-      var h = skuHash(dev.mcode + type.code);
-      var stock = 3 + Math.floor(h * 7); // 3..9 units on hand
+      var stock = 0;
       parts.push({
         id: 'P-' + dev.mcode + '-' + type.code,
         sku: dev.bcode + '-' + dev.mcode + '-' + type.code,

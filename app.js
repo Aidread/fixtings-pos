@@ -42,11 +42,32 @@ function num(v, fallback) {
 
 // ---------------- data layer ----------------
 var LS_KEY = 'fixtings_pos_v1';
+var SEED_VERSION = 2; // bump when the seed changes; see onlySampleData
 var DB = null;
 
 function loadDB() {
   try { DB = JSON.parse(localStorage.getItem(LS_KEY)); } catch (e) { DB = null; }
-  if (!DB || !DB.parts || !DB.parts.length) { DB = seedDB(); saveDB(); }
+  if (!DB || !DB.parts || !DB.parts.length) { DB = seedDB(); saveDB(); return; }
+  // Seed changed (e.g. stock reset to 0, one sample per scenario): if this
+  // install holds only sample data — no real customers, tickets, sales,
+  // phones or custom parts — reseed so it picks up the new seed. Real data
+  // is never touched.
+  if (DB.seedVersion !== SEED_VERSION && onlySampleData(DB)) {
+    var keepSettings = DB.settings, keepRole = DB.role;
+    DB = seedDB();
+    if (keepSettings) DB.settings = keepSettings;
+    if (keepRole) DB.role = keepRole;
+    saveDB();
+  }
+}
+
+// True when every record is a sample and at least one sample exists.
+function onlySampleData(db) {
+  var lists = [db.customers || [], db.phones || [], db.tickets || [], db.sales || []];
+  var hasSample = lists.some(function (l) { return l.some(function (r) { return r.isSample; }); });
+  if (!hasSample) return false;
+  if (!lists.every(function (l) { return l.every(function (r) { return r.isSample; }); })) return false;
+  return (db.parts || []).every(function (p) { return p.isSeed; });
 }
 function saveDB() { localStorage.setItem(LS_KEY, JSON.stringify(DB)); }
 
@@ -55,49 +76,24 @@ function seedDB() {
   var bySku = {};
   parts.forEach(function (p) { bySku[p.sku] = p; });
 
+  // One sample per scenario, so every screen can be tried. All part stock
+  // starts at 0 (see buildCatalog) — the owner adds real stock as it arrives.
   var customers = [
-    { id: 'C-sample1', name: 'Kemar Brown', phone: '876-555-0142', email: 'kemar.b@gmail.com', notes: 'Regular — iPhone user', isSample: true, createdAt: daysAgo(20) },
-    { id: 'C-sample2', name: 'Shanice Thompson', phone: '876-555-0187', email: '', notes: '', isSample: true, createdAt: daysAgo(14) },
-    { id: 'C-sample3', name: 'Damion Reid', phone: '876-555-0119', email: 'damion.reid@gmail.com', notes: 'Buys and sells phones', isSample: true, createdAt: daysAgo(9) },
-    { id: 'C-sample4', name: 'Alicia Grant', phone: '876-555-0163', email: '', notes: '', isSample: true, createdAt: daysAgo(4) }
+    { id: 'C-sample1', name: 'Kemar Brown', phone: '876-555-0142', email: 'kemar.b@gmail.com', notes: 'Regular — iPhone user', isSample: true, createdAt: daysAgo(20) }
   ];
 
   var phones = [
-    { id: 'PH-sample1', brand: 'Apple', model: 'iPhone 13', storage: '128GB', condition: 'Good', imei: '354812091234567', price: 85000, status: 'Available', isSample: true, createdAt: daysAgo(12) },
-    { id: 'PH-sample2', brand: 'Apple', model: 'iPhone 12 Pro Max', storage: '256GB', condition: 'Excellent', imei: '356789012345678', price: 110000, status: 'Available', isSample: true, createdAt: daysAgo(8) },
-    { id: 'PH-sample3', brand: 'Samsung', model: 'Galaxy S23', storage: '256GB', condition: 'Excellent', imei: '869012345678901', price: 95000, status: 'Available', isSample: true, createdAt: daysAgo(6) },
-    { id: 'PH-sample4', brand: 'Samsung', model: 'Galaxy A54', storage: '128GB', condition: 'Good', imei: '861234567890123', price: 42000, status: 'Reserved', isSample: true, createdAt: daysAgo(3) },
-    { id: 'PH-sample5', brand: 'Apple', model: 'iPhone 11', storage: '64GB', condition: 'Fair', imei: '353456789012345', price: 38000, status: 'Sold', isSample: true, createdAt: daysAgo(10) },
-    { id: 'PH-sample6', brand: 'Apple', model: 'iPhone 14', storage: '128GB', condition: 'Excellent', imei: '350123456789012', price: 105000, status: 'Available', isSample: true, createdAt: daysAgo(1) }
+    { id: 'PH-sample1', brand: 'Apple', model: 'iPhone 13', storage: '128GB', condition: 'Good', imei: '354812091234567', price: 85000, status: 'Available', isSample: true, createdAt: daysAgo(12) }
   ];
 
   // Sample tickets. Parts used are taken out of stock at seed time.
-  function takePart(sku, qty) {
-    var p = bySku[sku];
-    if (p) p.stock = Math.max(0, p.stock - qty);
-    return p ? { partId: p.id, sku: p.sku, label: p.brand + ' ' + p.model + ' — ' + p.label, price: p.price, qty: qty } : null;
-  }
   var tickets = [
-    {
-      id: 'T-sample1', customerId: 'C-sample4', customerName: 'Alicia Grant',
-      brand: 'Apple', model: 'iPhone 13', issue: 'Cracked screen, touch still works',
-      quoted: 26000, deposit: 10000, status: 'In Repair', technician: 'Sheldon',
-      partsUsed: [takePart('APP-IP13-SCR', 1)].filter(Boolean),
-      createdAt: daysAgo(1), updatedAt: todayStr(), isSample: true
-    },
     {
       id: 'T-sample2', customerId: 'C-sample1', customerName: 'Kemar Brown',
       brand: 'Samsung', model: 'Galaxy A54', issue: 'Battery drains fast, phone gets hot',
       quoted: 9500, deposit: 0, status: 'Awaiting Parts', technician: 'Kemar',
       partsUsed: [],
       createdAt: daysAgo(0), updatedAt: todayStr(), isSample: true
-    },
-    {
-      id: 'T-sample3', customerId: 'C-sample2', customerName: 'Shanice Thompson',
-      brand: 'Apple', model: 'iPhone 12', issue: 'Charging port loose, cable falls out',
-      quoted: 6500, deposit: 6500, status: 'Ready', technician: 'Sheldon',
-      partsUsed: [takePart('APP-IP12-CHG', 1)].filter(Boolean),
-      createdAt: daysAgo(2), updatedAt: todayStr(), isSample: true
     }
   ];
 
@@ -112,19 +108,9 @@ function seedDB() {
   sales.push(saleFor(todayStr(), 'C-sample1', 'Kemar Brown', 'Cash', [
     { kind: 'part', refId: scr13 ? scr13.id : '', label: 'Apple iPhone 13 — Display / Screen Assembly', price: scr13 ? scr13.price : 26000, qty: 1 }
   ]));
-  var batA54 = bySku['SAM-A54-BAT'];
-  var chgA54 = bySku['SAM-A54-CHG'];
-  if (batA54) batA54.stock = Math.max(0, batA54.stock - 1);
-  if (chgA54) chgA54.stock = Math.max(0, chgA54.stock - 1);
-  sales.push(saleFor(daysAgo(1), 'C-sample2', 'Shanice Thompson', 'Card', [
-    { kind: 'part', refId: batA54 ? batA54.id : '', label: 'Samsung Galaxy A54 — Battery', price: batA54 ? batA54.price : 9500, qty: 1 },
-    { kind: 'part', refId: chgA54 ? chgA54.id : '', label: 'Samsung Galaxy A54 — Charging Port', price: chgA54 ? chgA54.price : 6500, qty: 1 }
-  ]));
-  sales.push(saleFor(todayStr(), 'C-sample3', 'Damion Reid', 'Transfer', [
-    { kind: 'phone', refId: 'PH-sample5', label: 'Apple iPhone 11 64GB (Fair)', price: 38000, qty: 1 }
-  ]));
 
   return {
+    seedVersion: SEED_VERSION,
     settings: {
       shopName: 'Fixtings POS',
       shopContact: 'Fixtings Ja, Falmouth, Trelawny',
